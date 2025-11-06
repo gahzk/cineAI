@@ -1,92 +1,102 @@
-# 🎬 CineAI v1.1
+# CineAI v7.0 (Estável)
 
-<p align="center">
-  <strong>Seu assistente de cinema pessoal no terminal.</strong>
-</p>
+> Um sistema de recomendação de filmes e séries no terminal com modo de busca duplo (Cache e API Ao Vivo), construído em Python e `rich`.
 
-<p align="center">
-  CineAI é um sistema de recomendação de filmes e séries inteligente, construído em Python. Desenvolvido como um projeto universitário, ele demonstra os fundamentos de uma IA de recomendação, utilizando uma abordagem baseada em conhecimento, conteúdo e regras para fornecer sugestões personalizadas.
-</p>
+## ✨ Funcionalidades Principais
 
-<p align="center">
-  <img width="596" height="112" alt="Captura de tela 2025-10-17 161008" src="https://github.com/user-attachments/assets/faa542f0-db76-4d2b-aedd-97cea2e86452" />
-</p>
+Este projeto utiliza uma arquitetura de busca dupla para otimizar velocidade e precisão.
 
----
+### 1. Modo de Busca Duplo
 
-## 📣 O que há de novo na v1.1
+* **Busca Normal (Rápida, via Cache):**
+    * Utiliza um catálogo local pré-construído de 2500+ títulos.
+    * Ideal para recomendações genéricas baseadas em Gênero, Foco (Nota vs. Popularidade) e Duração.
+    * Resultados quasi-instantâneos após a primeira execução.
+* **Busca Específica (Precisa, via API Ao Vivo):**
+    * Ativada quando o usuário necessita de filtros granulares.
+    * Consulta a API do TMDB em tempo real para obter os resultados mais precisos.
+    * Permite filtrar por:
+        * Palavras-chave (ex: "cyberpunk", "viagem no tempo")
+        * Ator ou Atriz
+        * Diretor(a)
+        * Ano de Lançamento Específico
+        * Produtora ou Estúdio (ex: "A24", "Ghibli")
+        * Rede ou Streaming (ex: "HBO", "Netflix")
+        * Classificação Indicativa (BR)
+        * Nota Mínima
 
-A versão 1.1 traz a funcionalidade "Onde Assistir", melhorias na interface e correções de bugs.
+### 2. Extração Máxima de Detalhes
 
-* **Recurso "Onde Assistir":** As recomendações agora mostram em quais serviços de streaming (Netflix, HBO Max, etc.) no Brasil o título está disponível.
-* **UI Refinada:** O fluxo de perguntas foi melhorado para ser mais claro e intuitivo (ex: opções de "sim/nao" e duração).
-* **Correção de Bug:** Resolvido um problema de formatação visual que exibia texto de markup (ex: `[grey50]`) no terminal.
+Cada resultado é enriquecido com o máximo de informações relevantes da API:
 
----
+* **Onde Assistir:** Lista de serviços de streaming no Brasil.
+* **Detalhes Principais:** Elenco principal, Diretor (Filme) ou Criador (Série).
+* **Metadados:** Tagline, Classificação Indicativa (BR), Produtoras e Nº de Temporadas (para séries).
+* **Contexto:** Palavras-chave associadas e Recomendações Similares.
 
-## ✨ Funcionalidades
+### 3. Interface Gráfica de Terminal (TUI)
 
-* **Recomendações Personalizadas:** Responda a algumas perguntas sobre seus gostos e a IA irá calcular um "match score" para encontrar os títulos perfeitos para você.
-* **Onde Assistir (Streaming BR):** Descubra instantaneamente em qual plataforma de streaming no Brasil (Netflix, HBO Max, etc.) o título recomendado está disponível.
-* **Catálogo Amplo e Curado:** Acesso a um catálogo de 2500 títulos, com uma injeção garantida das melhores séries e animes.
-* **Busca Inteligente:** Use termos como "heist" ou "espacial" e a IA irá traduzir para os gêneros corretos.
-* **Crítico de IA Integrado:** Cada recomendação vem com um comentário único gerado por uma IA local, simulando um crítico de cinema.
-* **Refinamento de Busca:** Goste dos resultados? Refine sua busca com ajustes rápidos, como "focar em clássicos" ou "adicionar um gênero".
-* **Interface Elegante e Intuitiva:** Uma interface de usuário minimalista e moderna (construída com a biblioteca Rich) com um fluxo de perguntas refinado.
-* **Sistema de Cache:** O catálogo de filmes é salvo localmente para inicializações quasi-instantâneas após a primeira execução.
+* Construída inteiramente com a biblioteca `rich`.
+* Um tema de design centralizado para consistência visual.
+* Resultados exibidos em "cards" com painéis arredondados.
+* Prompts de usuário estáveis e claros, à prova de bugs de renderização do Colab.
+
+### 4. Motor de Pontuação e Cache
+
+* **Motor de Pontuação (Busca Normal):** Calcula um "match score" para cada item no cache baseado nas preferências do usuário (gênero, nota, popularidade, ano).
+* **Busca "Fuzzy":** Permite que o usuário digite termos como "espacial" ou "suspense", que são traduzidos internamente para os gêneros corretos (ex: "Ficção Científica", "Thriller").
+* **Cache Inteligente:** O catálogo principal e a lista de gêneros são cacheados localmente para inicializações rápidas.
 
 ---
 
 ## 🚀 Como Executar
 
-Este projeto foi projetado para ser executado em qualquer terminal que suporte Python 3.
+O projeto é otimizado para execução no Google Colab, mas também funciona em qualquer terminal local.
 
-**Pré-requisitos:**
-- Python 3.6 ou superior
+### Opção 1: Google Colab (Recomendado)
 
-**Passos:**
+1.  **Chave da API:** Obtenha uma Chave de API "Bearer Token" (v4 Auth) gratuita no [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api).
+2.  **Configurar o Script:** Abra o notebook `.ipynb` no Google Colab. Encontre a variável `TMDB_BEARER` no topo do script e cole sua chave.
+    ```python
+    TMDB_BEARER = "eyJhbGciOiJuz..."
+    ```
+3.  **Executar:** Execute todas as células do notebook.
 
-1.  **Clone o repositório:**
+### Opção 2: Terminal Local
+
+1.  **Pré-requisitos:** Python 3.7 ou superior.
+2.  **Clonar o Repositório:**
     ```bash
     git clone [https://github.com/seu-usuario/CineAI.git](https://github.com/seu-usuario/CineAI.git)
     cd CineAI
     ```
-
-2.  **Instale as dependências:**
-    O script instala suas próprias dependências na primeira execução. Alternativamente, você pode instalá-las manualmente:
+3.  **Instalar Dependências:**
     ```bash
     pip install requests rapidfuzz rich
     ```
-
-3.  **Execute o script:**
+4.  **Configurar o Script:** Abra o arquivo `.py` em um editor. Encontre a variável `TMDB_BEARER` no topo do script e cole sua chave de API.
+5.  **Executar:**
     ```bash
     python cineai.py
     ```
-    - Na primeira vez, o script irá construir o catálogo, o que pode levar alguns minutos. Nas execuções seguintes, ele será carregado do cache instantaneamente.
-    - Para forçar a reconstrução do catálogo, execute: `python cineai.py --rebuild`.
+
+### Nota sobre o Cache
+
+Na **primeira execução**, o script irá construir o catálogo local (`catalog.json`), o que pode levar alguns minutos. Nas execuções seguintes, ele carregará instantaneamente do cache.
+
+* Para forçar a reconstrução do catálogo, execute: `python cineai.py --rebuild`
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Python 3:** A linguagem principal do projeto.
-- **Rich:** Para a criação da interface de usuário elegante no terminal.
-- **Requests:** Para comunicação com a API do The Movie Database (TMDB).
-- **RapidFuzz:** Para o processamento de texto e correspondência de strings aproximada (fuzzy matching).
-
----
-
-## 🔮 Próximas Versões (Roadmap)
-
-A versão 1.1 é uma base sólida. As próximas atualizações planejadas podem incluir:
-
-- [ ] Mais opções de refinamento.
-- [ ] Suporte a filtros por ator ou diretor.
-- [ ] Expansão da base de conhecimento da IA de comentários local.
-- [ ] Salvar listas de "assistir mais tarde".
+* **Python 3:** Linguagem principal.
+* **Rich:** Para a criação da interface gráfica de usuário no terminal (TUI).
+* **Requests:** Para comunicação com a API do The Movie Database (TMDB).
+* **RapidFuzz:** Para o processamento de texto e correspondência "fuzzy".
 
 ---
 
 ## 📜 Licença
 
-Este projeto está licenciado sob a Licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está licenciado sob a Licença MIT.
