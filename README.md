@@ -1,4 +1,4 @@
-# CineAI v7.0 (Estável)
+# CineAI (Estável)
 
 > Um sistema de recomendação de filmes e séries no terminal com modo de busca duplo (Cache e API Ao Vivo), construído em Python e `rich`.
 
