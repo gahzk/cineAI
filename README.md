@@ -50,6 +50,7 @@ Cada resultado é enriquecido com o máximo de informações relevantes da API:
 ---
 
 ## 🚀 Como Executar
+https://github.com/seu-usuario/CineAI.git](https://github.com/seu-usuario/CineAI.git
 
 O projeto é otimizado para execução no Google Colab, mas também funciona em qualquer terminal local.
 
