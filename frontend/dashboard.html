@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineAI — Dashboard Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body class="page-wrapper">
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="/" class="navbar-brand">Cine<span>AI</span></a>
+    <div class="navbar-nav">
+      <a href="/" class="nav-link">Buscar</a>
+      <a href="/dashboard" class="nav-link active">Dashboard</a>
+    </div>
+    <div class="navbar-user" id="navbar-user">
+      <span>Olá, <strong id="navbar-username">—</strong></span>
+      <button class="btn btn-ghost btn-sm" id="btn-logout">Sair</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+<div class="container">
+
+  <div class="page-header">
+    <h1 class="page-title">Analytics <span class="highlight">Dashboard</span></h1>
+    <p class="page-desc">Visão geral dos padrões de uso e preferências da base de usuários do CineAI.</p>
+  </div>
+
+  <!-- Loading / Error states -->
+  <div class="loading-overlay" id="dash-loading">
+    <div class="spinner"></div>
+    <span>Carregando analytics...</span>
+  </div>
+  <div class="d-none" id="dash-error">
+    <div class="alert alert-error" id="dash-error-msg"></div>
+  </div>
+
+  <!-- Dashboard content (hidden until loaded) -->
+  <div class="d-none" id="dash-content">
+
+    <!-- KPI row -->
+    <div class="dashboard-grid three-col mb-2">
+      <div class="stat-card">
+        <div class="stat-card-icon">👤</div>
+        <div>
+          <div class="stat-value" id="kpi-users">—</div>
+          <div class="stat-label">Usuários cadastrados</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon teal">🎬</div>
+        <div>
+          <div class="stat-value" id="kpi-recs">—</div>
+          <div class="stat-label">Recomendações geradas</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">🏆</div>
+        <div>
+          <div class="stat-value text-secondary" id="kpi-top-genre">—</div>
+          <div class="stat-label">Gênero mais popular</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="dashboard-grid mb-2">
+
+      <!-- Genre Distribution -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Distribuição de Gêneros</div>
+            <div class="card-subtitle">Gêneros presentes nas recomendações geradas</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-genres"></canvas>
+        </div>
+      </div>
+
+      <!-- Search Mode Distribution -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Modo de Busca</div>
+            <div class="card-subtitle">Busca Rápida vs. Busca Específica (API)</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-modes"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Weight distribution -->
+    <div class="dashboard-grid mb-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Perfil de Pesos dos Usuários</div>
+            <div class="card-subtitle">Distribuição do peso de Nota vs. Popularidade nas preferências</div>
+          </div>
+        </div>
+        <div class="chart-container" style="height:200px">
+          <canvas id="chart-weights"></canvas>
+        </div>
+      </div>
+
+      <!-- Top genre table -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Gêneros por Volume</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Gênero</th>
+                <th>Aparições</th>
+                <th>% do Total</th>
+              </tr>
+            </thead>
+            <tbody id="table-genres"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top titles -->
+    <div class="card mb-2">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Títulos Mais Recomendados</div>
+          <div class="card-subtitle">Filmes e séries que mais aparecem nas recomendações geradas</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Título</th>
+              <th>Tipo</th>
+              <th>Gêneros</th>
+              <th>Nota</th>
+              <th>Recomendações</th>
+              <th>Score Médio</th>
+            </tr>
+          </thead>
+          <tbody id="table-titles"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="dashboard-grid three-col mb-2" id="insights-section">
+      <div class="insight-card">
+        <div class="insight-title">Gênero em Destaque</div>
+        <div class="insight-text" id="insight-genre">—</div>
+      </div>
+      <div class="insight-card teal">
+        <div class="insight-title">Título em Destaque</div>
+        <div class="insight-text" id="insight-title-text">—</div>
+      </div>
+      <div class="insight-card gold">
+        <div class="insight-title">Comportamento de Busca</div>
+        <div class="insight-text" id="insight-search">—</div>
+      </div>
+    </div>
+
+  </div><!-- /dash-content -->
+
+</div>
+</main>
+
+<footer>
+  <div class="container">
+    <span>CineAI &copy; 2025 — Painel restrito a administradores</span>
+  </div>
+</footer>
+
+<div id="toast-container"></div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

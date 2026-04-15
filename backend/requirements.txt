@@ -1,0 +1,27 @@
+# --- Web Framework ---
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# --- Database ---
+sqlalchemy==2.0.30
+aiosqlite==0.20.0          # SQLite async driver (dev)
+asyncpg==0.29.0            # PostgreSQL async driver (prod)
+
+# --- Settings ---
+pydantic==2.7.1
+pydantic-settings==2.2.1
+pydantic[email]==2.7.1
+
+# --- Auth ---
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# --- HTTP / TMDB ---
+requests==2.32.2
+urllib3==2.2.1
+
+# --- NLP / Fuzzy search ---
+rapidfuzz==3.9.3
+
+# --- Static files ---
+aiofiles==23.2.1
