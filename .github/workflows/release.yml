@@ -1,0 +1,56 @@
+name: Build & Publish Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"        # dispara em: git tag v2.1.0 && git push --tags
+
+permissions:
+  contents: write       # necessário para criar releases
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Extrair versão da tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Gerar pacote ZIP
+        run: |
+          python scripts/build_release.py \
+            --version ${{ steps.version.outputs.VERSION }} \
+            --output ./releases
+
+      - name: Publicar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "CineAI v${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## CineAI v${{ steps.version.outputs.VERSION }}
+
+            ### Instalação rápida
+            1. Baixe `cineai-v${{ steps.version.outputs.VERSION }}.zip` abaixo
+            2. Extraia em qualquer pasta
+            3. **Windows:** duplo clique em `start.bat`
+               **Linux/Mac:** `chmod +x start.sh && ./start.sh`
+            4. Cole seu token TMDB quando solicitado
+            5. O navegador abre automaticamente em `http://localhost:8000`
+
+            ### Pré-requisito
+            - [Python 3.10+](https://www.python.org/downloads/) — marque **"Add Python to PATH"** no Windows
+
+            ### Token TMDB (gratuito)
+            Obtenha em: https://www.themoviedb.org/settings/api
+          files: releases/cineai-v${{ steps.version.outputs.VERSION }}.zip
+          draft: false
+          prerelease: false
