@@ -2,16 +2,26 @@
 """Application settings loaded from environment variables."""
 import tempfile
 from pathlib import Path
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # --- API ---
-    TMDB_BEARER_TOKEN: str = ""
+    TMDB_BEARER_TOKEN: str = Field(
+        default="",
+        validation_alias=AliasChoices("TMDB_BEARER_TOKEN", "TMDB_TOKEN"),
+    )
+    TMDB_API_KEY: str = Field(default="", validation_alias="TMDB_API_KEY")
     TMDB_BASE_URL: str = "https://api.themoviedb.org/3"
+    TMDB_IMAGE_BASE_URL: str = "https://image.tmdb.org/t/p/w500"
 
     # --- Database ---
     DATABASE_URL: str = "sqlite+aiosqlite:///./cineai.db"
+    DB_ECHO: bool = False
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_DISABLE_PREPARED_STATEMENT_CACHE: bool = False
 
     # --- Auth / JWT ---
     SECRET_KEY: str = "change-me-in-production-use-secrets"
@@ -33,6 +43,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

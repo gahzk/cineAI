@@ -228,6 +228,9 @@ function buildResultCard(item) {
 
   const typeLabel = item.content_type === 'movie' ? 'FILME' : 'SÉRIE';
   const typeClass = item.content_type === 'movie' ? 'movie' : 'tv';
+  const poster = item.poster_url
+    ? `<div class="result-poster"><img src="${escAttr(item.poster_url)}" alt="Capa de ${escAttr(item.title)}" loading="lazy" /></div>`
+    : `<div class="result-poster"><div class="result-poster-placeholder">${escHtml(item.title)}</div></div>`;
 
   const genres = item.genres
     ? item.genres.split('|').filter(Boolean).map(g =>
@@ -245,6 +248,7 @@ function buildResultCard(item) {
     : `<div class="text-muted" style="font-size:0.8rem">Não encontrado em streaming</div>`;
 
   card.innerHTML = `
+    ${poster}
     <div class="result-card-header">
       <div style="flex:1; min-width:0">
         <div class="result-title">${escHtml(item.title)}</div>
@@ -292,4 +296,8 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function escAttr(str) {
+  return escHtml(str).replace(/'/g, '&#39;');
 }

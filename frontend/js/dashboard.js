@@ -12,15 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================
 // Chart.js global defaults (dark theme)
 // ============================================================
-Chart.defaults.color = '#9e8899';
-Chart.defaults.borderColor = '#3d0020';
+Chart.defaults.color = '#666666';
+Chart.defaults.borderColor = '#E5E5E5';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
 const PALETTE_PRIMARY = [
-  '#FF007F','#FF4DA6','#FF80BF',
-  '#00B29A','#00D4B8','#00F5D4',
-  '#FFD700','#FF8C00','#FF4F4F',
-  '#A259FF',
+  '#14213D', '#FCA311', '#000000',
+  '#8A8A84', '#CFCFCA', '#E5E5E5',
 ];
 
 // ============================================================
@@ -94,8 +92,8 @@ function renderGenreChart(genres) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#3d0020' }, ticks: { color: '#9e8899' } },
-        y: { grid: { color: '#3d0020' }, ticks: { color: '#9e8899' }, beginAtZero: true },
+        x: { grid: { color: '#E5E5E5' }, ticks: { color: '#666666' } },
+        y: { grid: { color: '#E5E5E5' }, ticks: { color: '#666666' }, beginAtZero: true },
       },
     },
   });
@@ -112,8 +110,8 @@ function renderModeChart(modes) {
       labels,
       datasets: [{
         data,
-        backgroundColor: ['#FF007FCC', '#00B29ACC'],
-        borderColor:     ['#FF007F', '#00B29A'],
+        backgroundColor: ['#14213D', '#FCA311'],
+        borderColor:     ['#14213D', '#FCA311'],
         borderWidth: 2,
         hoverOffset: 8,
       }],
@@ -124,7 +122,7 @@ function renderModeChart(modes) {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { padding: 16, usePointStyle: true, color: '#9e8899' },
+          labels: { padding: 16, usePointStyle: true, color: '#666666' },
         },
       },
       cutout: '60%',
@@ -142,8 +140,8 @@ function renderWeightChart(weights) {
       datasets: [{
         label: 'Usuários',
         data: weights.map(w => w.count),
-        backgroundColor: ['#FF007FCC', '#00B29ACC', '#FFD700CC'],
-        borderColor:     ['#FF007F', '#00B29A', '#FFD700'],
+        backgroundColor: ['#14213D', '#FCA311', '#E5E5E5'],
+        borderColor:     ['#14213D', '#FCA311', '#000000'],
         borderWidth: 1,
         borderRadius: 4,
       }],
@@ -154,8 +152,8 @@ function renderWeightChart(weights) {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#3d0020' }, ticks: { color: '#9e8899' }, beginAtZero: true },
-        y: { grid: { color: '#3d0020' }, ticks: { color: '#9e8899' } },
+        x: { grid: { color: '#E5E5E5' }, ticks: { color: '#666666' }, beginAtZero: true },
+        y: { grid: { color: '#E5E5E5' }, ticks: { color: '#666666' } },
       },
     },
   });

@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import concurrent.futures as cf
+import base64
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -35,6 +36,44 @@ log = logging.getLogger("cineai.tmdb")
 
 _SESSION: Optional[requests.Session] = None
 _SESSION_LOCK = threading.Lock()
+_LAST_AUTH_ERROR: Optional[str] = None
+
+
+def _decode_jwt_payload(token: str) -> Dict[str, Any]:
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload.encode()).decode())
+    except (IndexError, json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        return {}
+
+
+def _is_supabase_jwt(token: str) -> bool:
+    return token.count(".") == 2 and _decode_jwt_payload(token).get("iss") == "supabase"
+
+
+def _has_tmdb_bearer_token() -> bool:
+    token = settings.TMDB_BEARER_TOKEN.strip()
+    return bool(token) and not _is_supabase_jwt(token)
+
+
+def tmdb_credentials_status() -> Dict[str, str]:
+    """Return a user-facing status for the configured TMDB credentials."""
+    token = settings.TMDB_BEARER_TOKEN.strip()
+    if _is_supabase_jwt(token):
+        if settings.TMDB_API_KEY.strip():
+            return {"status": "configured", "message": "TMDB API key v3 configurada."}
+        return {
+            "status": "invalid",
+            "message": "TMDB_TOKEN contem um JWT do Supabase, nao um token do TMDB.",
+        }
+    if _LAST_AUTH_ERROR:
+        return {"status": "invalid", "message": _LAST_AUTH_ERROR}
+    if _has_tmdb_bearer_token():
+        return {"status": "configured", "message": "TMDB bearer token configurado."}
+    if settings.TMDB_API_KEY.strip():
+        return {"status": "configured", "message": "TMDB API key v3 configurada."}
+    return {"status": "missing", "message": "Nenhuma credencial TMDB configurada."}
 
 
 def _get_session() -> requests.Session:
@@ -55,10 +94,11 @@ def _get_session() -> requests.Session:
                     pool_maxsize=settings.HTTP_WORKERS,
                 )
                 session.mount("https://", adapter)
-                session.headers.update({
-                    "Authorization": f"Bearer {settings.TMDB_BEARER_TOKEN}",
-                    "Accept": "application/json",
-                })
+                session.headers.update({"Accept": "application/json"})
+                if _has_tmdb_bearer_token():
+                    session.headers.update({
+                        "Authorization": f"Bearer {settings.TMDB_BEARER_TOKEN.strip()}",
+                    })
                 _SESSION = session
     return _SESSION
 
@@ -87,8 +127,11 @@ def _rate_limited_wait() -> None:
 
 def tmdb_request(path: str, params: Optional[Dict] = None, retries: int = 3) -> Dict:
     """Execute a GET request against the TMDB API with retry/back-off."""
+    global _LAST_AUTH_ERROR
     wait_time = 0.3
-    params = params or {}
+    params = dict(params or {})
+    if not _has_tmdb_bearer_token() and settings.TMDB_API_KEY.strip():
+        params["api_key"] = settings.TMDB_API_KEY.strip()
     session = _get_session()
 
     for attempt in range(retries + 1):
@@ -97,6 +140,17 @@ def tmdb_request(path: str, params: Optional[Dict] = None, retries: int = 3) -> 
             r = session.get(
                 f"{settings.TMDB_BASE_URL}{path}", params=params, timeout=20
             )
+            if r.status_code == 401:
+                detail = "Credencial TMDB invalida. Configure TMDB_BEARER_TOKEN/TMDB_TOKEN ou TMDB_API_KEY no .env."
+                try:
+                    status_message = r.json().get("status_message")
+                    if status_message:
+                        detail = f"{detail} Resposta TMDB: {status_message}"
+                except (ValueError, AttributeError):
+                    pass
+                _LAST_AUTH_ERROR = detail
+                log.warning(detail)
+                return {}
             if r.status_code == 429:
                 retry_after = safe_float(r.headers.get("Retry-After"), wait_time)
                 time.sleep(min(10.0, retry_after))
@@ -165,7 +219,11 @@ def get_genres() -> Dict[str, Dict[str, str]]:
     if _genres_cache:
         return _genres_cache
     cached = _read_cache(GENRES_CACHE)
-    if cached and "movie_genres" in cached and "tv_genres" in cached:
+    if (
+        cached
+        and cached.get("movie_genres")
+        and cached.get("tv_genres")
+    ):
         _genres_cache = cached
         return _genres_cache
 
@@ -205,7 +263,17 @@ def build_catalog_item(it: Dict, kind: str, g_map: Dict[str, str]) -> Optional[D
         "vote_avg": safe_float(it.get("vote_average")),
         "vote_cnt": safe_int(it.get("vote_count")),
         "popularity": safe_float(it.get("popularity")),
+        "poster_path": it.get("poster_path"),
     }
+
+
+def poster_url(poster_path: Optional[str]) -> Optional[str]:
+    """Build a TMDB poster URL from a poster path."""
+    if not poster_path:
+        return None
+    if poster_path.startswith("http://") or poster_path.startswith("https://"):
+        return poster_path
+    return f"{settings.TMDB_IMAGE_BASE_URL}{poster_path}"
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +539,8 @@ def fetch_details(item: Dict) -> Dict:
     data = tmdb_request(f"/{kind}/{item['id']}", {"language": "pt-BR", "append_to_response": ap})
     if not data:
         return item
+
+    item["poster_path"] = data.get("poster_path") or item.get("poster_path")
 
     if kind == "movie":
         item["runtime"] = safe_int(data.get("runtime")) or None

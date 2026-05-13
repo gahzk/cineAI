@@ -88,6 +88,7 @@ def _catalog_item_to_schema(item: Dict, rank: int, score: float) -> CatalogItem:
         episodes=item.get("episodes"),
         recommendations=item.get("recommendations"),
         ai_comment=item.get("ai_comment"),
+        poster_url=tmdb.poster_url(item.get("poster_path")),
     )
 
 
@@ -156,6 +157,9 @@ async def normal_search(
     """Score the local catalog against the user's preferences and return top 3."""
     catalog = tmdb.get_catalog()
     if not catalog:
+        credential_status = tmdb.tmdb_credentials_status()
+        if credential_status["status"] in {"missing", "invalid"}:
+            raise HTTPException(status_code=503, detail=credential_status["message"])
         raise HTTPException(status_code=503, detail="Catálogo não disponível. Tente novamente em alguns minutos.")
 
     prefs = _prefs_from_normal(body)
@@ -206,6 +210,9 @@ async def specific_search(
         live_catalog.extend(tmdb.fetch_live_discover("tv", api_params.copy(), target_pages=2))
 
     if not live_catalog:
+        credential_status = tmdb.tmdb_credentials_status()
+        if credential_status["status"] in {"missing", "invalid"}:
+            raise HTTPException(status_code=503, detail=credential_status["message"])
         raise HTTPException(status_code=404, detail="Nenhum resultado encontrado para esses filtros.")
 
     top_items = live_catalog[:TOP_N]

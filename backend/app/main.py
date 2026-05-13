@@ -14,9 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+from sqlalchemy import text
 
 from app.config import settings
-from app.database import init_db
+from app.database import database_url, engine, init_db
 from app.routers import auth, recommendations, analytics
 
 logging.basicConfig(level=logging.WARNING)
@@ -56,18 +57,29 @@ app.include_router(analytics.router, prefix=API_PREFIX)
 _FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend"
 if _FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR)), name="static")
+    app.mount("/css", StaticFiles(directory=str(_FRONTEND_DIR / "css")), name="css")
+    app.mount("/js", StaticFiles(directory=str(_FRONTEND_DIR / "js")), name="js")
 
     @app.get("/", include_in_schema=False)
     async def serve_index():
-        return FileResponse(str(_FRONTEND_DIR / "index.html"))
+        return FileResponse(
+            str(_FRONTEND_DIR / "index.html"),
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
 
     @app.get("/login", include_in_schema=False)
     async def serve_login():
-        return FileResponse(str(_FRONTEND_DIR / "login.html"))
+        return FileResponse(
+            str(_FRONTEND_DIR / "login.html"),
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
 
     @app.get("/dashboard", include_in_schema=False)
     async def serve_dashboard():
-        return FileResponse(str(_FRONTEND_DIR / "dashboard.html"))
+        return FileResponse(
+            str(_FRONTEND_DIR / "dashboard.html"),
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
 
 # ---------------------------------------------------------------------------
 # Startup
@@ -88,3 +100,15 @@ async def on_startup():
 @app.get("/api/health", tags=["health"])
 async def health():
     return {"status": "ok", "version": "2.0.0"}
+
+
+@app.get("/api/health/db", tags=["health"])
+async def database_health():
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+
+    return {
+        "status": "ok",
+        "database": database_url.get_backend_name(),
+        "driver": database_url.get_driver_name(),
+    }
