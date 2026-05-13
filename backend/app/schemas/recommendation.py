@@ -51,6 +51,7 @@ class CatalogItem(BaseModel):
     episodes: Optional[int] = None
     recommendations: Optional[str] = None
     ai_comment: Optional[str] = None
+    poster_url: Optional[str] = None
 
 
 class SearchResponse(BaseModel):
