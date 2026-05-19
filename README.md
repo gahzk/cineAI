@@ -2,92 +2,119 @@
 
 # 🎬 cineAI
 
-**An AI-powered cinematic recommendation engine, decoupled into a modern full-stack architecture for local-first development and production deployment.**
+**Sistema inteligente de recomendação de filmes e séries — arquitetura full-stack desacoplada, local-first e pronta para produção.**
 
-[![Status](https://img.shields.io/badge/status-active-success.svg)](https://github.com/gahzk/cineAI)
+[![Status](https://img.shields.io/badge/status-ativo-success.svg)](https://github.com/gahzk/cineAI)
 [![Backend](https://img.shields.io/badge/backend-FastAPI-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Frontend](https://img.shields.io/badge/frontend-React-61DAFB.svg?logo=react)](https://react.dev/)
 [![Supabase](https://img.shields.io/badge/database-Supabase-3ECF8E.svg?logo=supabase)](https://supabase.com/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?logo=python)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-18%2B-339933.svg?logo=node.js)](https://nodejs.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
+[![License: MIT](https://img.shields.io/badge/licença-MIT-yellow.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-bem--vindas-brightgreen.svg)](#-contribuindo)
 
-[Quick Start](#-quick-start) • [Architecture](#-architecture-map) • [Features](#-feature-matrix) • [Troubleshooting](#-troubleshooting) • [Contributing](#-contributing)
+### 🏠 [Página Principal do Projeto](https://github.com/gahzk/cineAI) · 📡 [API Docs](http://localhost:8000/docs) · 🖥️ [App Local](http://localhost:5173)
+
+[Início Rápido](#-início-rápido) • [Arquitetura](#-arquitetura) • [Funcionalidades](#-funcionalidades) • [Solução de Problemas](#-solução-de-problemas) • [Contribuindo](#-contribuindo)
 
 </div>
 
 ---
 
-## 📖 Overview
+## 🏠 Página Principal
 
-`cineAI` was originally a research notebook prototype. It has now been **fully migrated** into a production-ready, decoupled application composed of an independent Python/FastAPI **backend** serving the inference logic and a modern JavaScript **frontend** consuming it over a clean REST contract, with **Supabase** as the persistent data layer.
+> A **página principal** do cineAI é servida pelo módulo `/frontend` (React + Vite) e consome a API exposta pelo `/backend` (FastAPI). Ao subir os dois serviços localmente, a interface fica disponível em **`http://localhost:5173`**.
 
-> **Migration Note:** Notebook-based execution has been deprecated. The system now runs as two long-lived services that can be developed, scaled, containerized, and deployed independently.
+| Recurso                | URL                                                   | Descrição                                          |
+| ---------------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| 🖥️ App (local)         | [`localhost:5173`](http://localhost:5173)             | Interface principal: catálogo, busca e recomendações. |
+| 📡 API (local)         | [`localhost:8000/api/v1`](http://localhost:8000/api/v1) | Endpoints REST versionados.                        |
+| 📘 OpenAPI / Swagger   | [`localhost:8000/docs`](http://localhost:8000/docs)   | Documentação interativa auto-gerada.               |
+| 🗄️ Repositório         | [`github.com/gahzk/cineAI`](https://github.com/gahzk/cineAI) | Código-fonte e issues.                             |
+| 🌐 Deploy (produção)   | _<!-- adicionar URL aqui quando publicado -->_         | Em breve.                                          |
+
+<!--
+  📸 Screenshot da tela principal — substitua o link abaixo por uma imagem real:
+  ![Página principal do cineAI](./docs/screenshot-home.png)
+-->
+
+> Quer ver rodando? Siga o [Início Rápido](#-início-rápido) — em poucos minutos a página principal estará no ar na sua máquina.
 
 ---
 
-## 🗺️ Architecture Map
+## 📖 Visão Geral
+
+O **cineAI** começou como um protótipo em notebook de pesquisa. Foi **totalmente migrado** para uma aplicação desacoplada e pronta para produção, composta por:
+
+- 🐍 **`/backend`** — API em Python/FastAPI com a lógica de inferência e recomendação.
+- ⚛️ **`/frontend`** — Interface em React/Vite que entrega a página principal ao usuário.
+- 🟢 **`/supabase`** — Camada de persistência (Postgres + Auth + Storage).
+
+> **Nota de migração:** a execução via notebook foi descontinuada. O sistema agora roda como serviços de longa duração, independentes, containerizáveis e implantáveis separadamente.
+
+---
+
+## 🗺️ Arquitetura
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│                            USER (Browser)                           │
+│                       USUÁRIO  (Navegador)                          │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │  HTTP / HTTPS
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   /frontend  —  React  (Port 5173)                  │
+│         /frontend  —  React + Vite  (Página Principal · 5173)       │
 │   ┌─────────────┐   ┌─────────────┐   ┌──────────────────────────┐  │
-│   │  UI Layer   │ → │  API Client │ → │  State Mgmt (hooks/ctx)  │  │
+│   │  UI / Pages │ → │  API Client │ → │   Estado (hooks/ctx)     │  │
 │   └─────────────┘   └─────────────┘   └──────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────┘
-                                │  REST  (JSON over fetch/axios)
+                                │  REST (JSON)
                                 │  /api/v1/recommend, /api/v1/search
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                  /backend  —  FastAPI  (Port 8000)                  │
+│                /backend  —  FastAPI  (API · 8000)                   │
 │   ┌─────────────┐   ┌─────────────┐   ┌──────────────────────────┐  │
-│   │  Routers    │ → │  Services   │ → │   AI / Inference Core    │  │
+│   │   Routers   │ → │  Services   │ → │   Núcleo de IA / Modelo  │  │
 │   └─────────────┘   └─────────────┘   └────────────┬─────────────┘  │
 └────────────────────────────────────────────────────┼────────────────┘
                                                      │
                                                      ▼
                               ┌─────────────────────────────────┐
-                              │   /supabase  —  Persistence     │
+                              │   /supabase  —  Persistência    │
                               │   (Auth · Postgres · Storage)   │
                               └─────────────────────────────────┘
 ```
 
-**Communication contract:** strict JSON, versioned under `/api/v1/*`, CORS enabled for the frontend origin.
+**Contrato de comunicação:** JSON estrito, versionado em `/api/v1/*`, com CORS liberado para a origem do frontend.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Início Rápido
 
-The project is split into independent services. Open **two terminals** — one per service.
+O projeto é dividido em serviços independentes. Abra **dois terminais** — um para cada serviço.
 
 ### 🐍 1. Backend — `/backend`
 
 <details open>
-<summary><strong>Step-by-step setup</strong></summary>
+<summary><strong>Passo a passo</strong></summary>
 
 ```bash
-# 1. Move into the backend directory
+# 1. Entre na pasta do backend
 cd backend
 
-# 2. Create and activate a virtual environment
+# 2. Crie e ative o ambiente virtual
 python -m venv .venv
 source .venv/bin/activate          # Linux / macOS
 # .venv\Scripts\activate           # Windows (PowerShell)
 
-# 3. Install dependencies
+# 3. Instale as dependências
 pip install -r requirements.txt
 
-# 4. Configure environment variables
+# 4. Configure as variáveis de ambiente
 cp .env.example .env
-# then edit .env with your secrets
+# em seguida, edite o .env com seus segredos
 
-# 5. Launch the dev server
+# 5. Suba o servidor de desenvolvimento
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -95,38 +122,38 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 #### `backend/.env`
 
-| Variable           | Description                                | Example                       |
+| Variável           | Descrição                                  | Exemplo                       |
 | ------------------ | ------------------------------------------ | ----------------------------- |
-| `APP_ENV`          | Runtime environment                        | `development`                 |
-| `API_PORT`         | Port the FastAPI server listens on         | `8000`                        |
-| `MODEL_PATH`       | Local path to the AI model artifact        | `./models/cineai.bin`         |
-| `TMDB_API_KEY`     | (Optional) Movie metadata provider key     | `xxxxxxxxxxxxxxxx`            |
-| `SUPABASE_URL`     | Supabase project URL                       | `https://xxx.supabase.co`     |
-| `SUPABASE_KEY`     | Supabase service/anon key                  | `eyJhbGciOi...`               |
-| `CORS_ORIGINS`     | Comma-separated allowed origins            | `http://localhost:5173`       |
+| `APP_ENV`          | Ambiente de execução                       | `development`                 |
+| `API_PORT`         | Porta de escuta do FastAPI                 | `8000`                        |
+| `MODEL_PATH`       | Caminho local do artefato do modelo de IA  | `./models/cineai.bin`         |
+| `TMDB_API_KEY`     | (Opcional) Chave do provedor de metadados  | `xxxxxxxxxxxxxxxx`            |
+| `SUPABASE_URL`     | URL do projeto Supabase                    | `https://xxx.supabase.co`     |
+| `SUPABASE_KEY`     | Chave service/anon do Supabase             | `eyJhbGciOi...`               |
+| `CORS_ORIGINS`     | Origens permitidas (separadas por vírgula) | `http://localhost:5173`       |
 | `LOG_LEVEL`        | `debug` \| `info` \| `warning` \| `error`  | `info`                        |
 
-> ✅ Once running, OpenAPI docs are auto-served at **`http://localhost:8000/docs`**.
+> ✅ Após subir, a documentação OpenAPI fica em **`http://localhost:8000/docs`**.
 
 ---
 
 ### ⚛️ 2. Frontend — `/frontend`
 
 <details open>
-<summary><strong>Step-by-step setup</strong></summary>
+<summary><strong>Passo a passo</strong></summary>
 
 ```bash
-# 1. Move into the frontend directory
+# 1. Entre na pasta do frontend
 cd frontend
 
-# 2. Install dependencies
-npm install            # or: pnpm install / yarn
+# 2. Instale as dependências
+npm install            # ou: pnpm install / yarn
 
-# 3. Configure environment variables
+# 3. Configure as variáveis de ambiente
 cp .env.example .env.local
-# then edit .env.local
+# em seguida, edite o .env.local
 
-# 4. Launch the dev server
+# 4. Suba o servidor de desenvolvimento
 npm run dev
 ```
 
@@ -134,35 +161,36 @@ npm run dev
 
 #### `frontend/.env.local`
 
-| Variable                  | Description                          | Example                        |
+| Variável                  | Descrição                            | Exemplo                        |
 | ------------------------- | ------------------------------------ | ------------------------------ |
-| `VITE_API_BASE_URL`       | Base URL of the backend API          | `http://localhost:8000/api/v1` |
-| `VITE_SUPABASE_URL`       | Supabase project URL                 | `https://xxx.supabase.co`      |
-| `VITE_SUPABASE_ANON_KEY`  | Supabase anonymous key               | `eyJhbGciOi...`                |
-| `VITE_APP_NAME`           | Display name in the UI               | `cineAI`                       |
+| `VITE_API_BASE_URL`       | URL base da API do backend           | `http://localhost:8000/api/v1` |
+| `VITE_SUPABASE_URL`       | URL do projeto Supabase              | `https://xxx.supabase.co`      |
+| `VITE_SUPABASE_ANON_KEY`  | Chave anônima do Supabase            | `eyJhbGciOi...`                |
+| `VITE_APP_NAME`           | Nome exibido na UI                   | `cineAI`                       |
 
-> ✅ The app boots at **`http://localhost:5173`** and talks to the backend over REST.
-
----
-
-## ✅ Feature Matrix
-
-| Capability                          | Legacy (Notebook)        | Current (Local Decoupled)               |
-| ----------------------------------- | ------------------------ | --------------------------------------- |
-| Persistent execution                | ❌ Session-bound         | ✅ Long-lived services                  |
-| Public REST API                     | ❌ Not exposed           | ✅ Versioned `/api/v1/*`                |
-| Modern UI                           | ❌ Notebook widgets only | ✅ React + responsive design            |
-| Environment isolation               | ⚠️ Shared runtime        | ✅ `.venv` + isolated `node_modules`    |
-| Configuration via `.env`            | ❌ Hardcoded             | ✅ Twelve-factor compliant              |
-| Hot-reload dev experience           | ⚠️ Manual re-runs        | ✅ Uvicorn `--reload` + Vite HMR        |
-| Type-safe contracts (OpenAPI)       | ❌                       | ✅ Auto-generated at `/docs`            |
-| Persistent storage                  | ❌ In-memory only        | ✅ Supabase (Postgres + Auth)           |
-| Independent scaling                 | ❌                       | ✅ Front and back deployable separately |
-| Offline / on-prem ready             | ❌ Cloud-locked          | ✅ Fully local-first                    |
+> ✅ A **página principal** sobe em **`http://localhost:5173`** e conversa com o backend via REST.
 
 ---
 
-## 🧪 Health Check
+## ✨ Funcionalidades
+
+| Capacidade                                | Legado (Notebook)        | Atual (Local Desacoplado)                |
+| ----------------------------------------- | ------------------------ | ---------------------------------------- |
+| Execução persistente                      | ❌ Limitada à sessão     | ✅ Serviços de longa duração             |
+| API REST pública                          | ❌ Não exposta           | ✅ Versionada em `/api/v1/*`             |
+| Interface moderna                         | ❌ Apenas widgets        | ✅ React + design responsivo             |
+| Página principal acessível via navegador  | ❌                       | ✅ `http://localhost:5173`               |
+| Isolamento de ambiente                    | ⚠️ Runtime compartilhado | ✅ `.venv` + `node_modules` isolados     |
+| Configuração via `.env`                   | ❌ Hardcoded             | ✅ Twelve-factor                         |
+| Hot-reload no desenvolvimento             | ⚠️ Re-runs manuais       | ✅ Uvicorn `--reload` + Vite HMR         |
+| Contratos type-safe (OpenAPI)             | ❌                       | ✅ Auto-gerados em `/docs`               |
+| Persistência                              | ❌ Apenas em memória     | ✅ Supabase (Postgres + Auth)            |
+| Escalonamento independente                | ❌                       | ✅ Front e back deployáveis separadamente |
+| Offline / on-prem                         | ❌ Travado em nuvem      | ✅ 100% local-first                      |
+
+---
+
+## 🧪 Verificação de Saúde
 
 ```bash
 curl http://localhost:8000/api/v1/health
@@ -170,16 +198,16 @@ curl http://localhost:8000/api/v1/health
 ```
 
 <details>
-<summary><strong>📜 Example startup logs</strong></summary>
+<summary><strong>📜 Exemplo de logs de inicialização</strong></summary>
 
 ```log
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 INFO:     Started reloader process [12345] using StatReload
 INFO:     Started server process [12346]
 INFO:     Waiting for application startup.
-INFO:     [cineAI] Loading model from ./models/cineai.bin ...
-INFO:     [cineAI] Embeddings ready (dim=768, items=42_318)
-INFO:     [cineAI] Supabase connection OK
+INFO:     [cineAI] Carregando modelo de ./models/cineai.bin ...
+INFO:     [cineAI] Embeddings prontos (dim=768, items=42_318)
+INFO:     [cineAI] Conexão Supabase OK
 INFO:     Application startup complete.
 ```
 
@@ -187,17 +215,17 @@ INFO:     Application startup complete.
 
 ---
 
-## 🛠️ Troubleshooting
+## 🛠️ Solução de Problemas
 
 <details>
-<summary><strong>CORS errors in the browser console</strong></summary>
+<summary><strong>Erros de CORS no console do navegador</strong></summary>
 
-Ensure `CORS_ORIGINS` in `backend/.env` includes the exact frontend origin (scheme + host + port), e.g. `http://localhost:5173`. Restart the backend after any change.
+Garanta que `CORS_ORIGINS` em `backend/.env` inclui a origem exata do frontend (esquema + host + porta), por exemplo `http://localhost:5173`. Reinicie o backend após qualquer alteração.
 
 </details>
 
 <details>
-<summary><strong>Port already in use (8000 / 5173)</strong></summary>
+<summary><strong>Porta já em uso (8000 / 5173)</strong></summary>
 
 ```bash
 # Linux / macOS
@@ -208,50 +236,50 @@ netstat -ano | findstr :8000
 taskkill /PID <PID> /F
 ```
 
-Or override the port: `uvicorn app.main:app --port 8010`.
+Ou troque a porta: `uvicorn app.main:app --port 8010`.
 
 </details>
 
 <details>
-<summary><strong>Supabase connection fails</strong></summary>
+<summary><strong>Falha ao conectar no Supabase</strong></summary>
 
-Verify `SUPABASE_URL` and `SUPABASE_KEY` in `backend/.env`. Confirm the project is not paused in the Supabase dashboard, and that your network allows outbound HTTPS.
+Verifique `SUPABASE_URL` e `SUPABASE_KEY` em `backend/.env`. Confirme se o projeto não está pausado no dashboard do Supabase e se a rede permite saída HTTPS.
 
 </details>
 
 <details>
-<summary><strong>Frontend cannot reach backend</strong></summary>
+<summary><strong>Frontend não acessa o backend</strong></summary>
 
-Confirm `VITE_API_BASE_URL` matches the backend host/port and that the backend is actually listening (`curl /health`).
+Confirme que `VITE_API_BASE_URL` aponta para o host/porta corretos e que o backend está mesmo escutando (`curl /health`).
 
 </details>
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contribuindo
 
-Contributions are welcome and appreciated.
+Contribuições são muito bem-vindas!
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Commit using conventional commits: `feat:`, `fix:`, `docs:`, `refactor:` ...
-4. Run linters/tests locally before pushing
-5. Open a Pull Request describing **what** changed and **why**
+1. Faça um fork do repositório
+2. Crie uma branch de feature: `git checkout -b feat/sua-feature`
+3. Use commits convencionais: `feat:`, `fix:`, `docs:`, `refactor:` ...
+4. Rode linters e testes localmente antes de enviar
+5. Abra um Pull Request descrevendo **o que** mudou e **por quê**
 
-A formal `CONTRIBUTING.md` will be added soon with full code style, branching strategy, and the review checklist.
+Um `CONTRIBUTING.md` formal será adicionado em breve com o estilo de código, estratégia de branches e checklist de revisão.
 
 ---
 
-## 📄 License
+## 📄 Licença
 
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for the full text.
+Distribuído sob a **Licença MIT**. Veja [`LICENSE`](./LICENSE) para o texto completo.
 
 ---
 
 <div align="center">
 
-Built with care by [@gahzk](https://github.com/gahzk) and contributors.
+Feito com 🎬 por [@gahzk](https://github.com/gahzk) e colaboradores.
 <br/>
-⭐ If this project helps you, consider starring the repo.
+⭐ Se este projeto te ajuda, considere dar uma estrela no repositório.
 
 </div>
