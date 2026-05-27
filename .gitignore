@@ -1,0 +1,33 @@
+# --- Secrets — never commit ---
+.env
+*.env
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+dist/
+build/
+
+# --- Database (SQLite local) ---
+*.db
+*.sqlite3
+
+# --- TMDB cache ---
+cineai_cache/
+
+# --- Logs ---
+*.log
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
