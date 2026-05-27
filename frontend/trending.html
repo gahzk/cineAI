@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineAI — Populares da Semana</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=quality-1" />
+</head>
+<body class="page-wrapper">
+
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="/" class="navbar-brand">Cine<span>AI</span></a>
+    <div class="navbar-nav">
+      <a href="/" class="nav-link">Buscar</a>
+      <a href="/trending" class="nav-link active">Populares</a>
+      <a href="/dashboard" class="nav-link" id="nav-dashboard" style="display:none">Dashboard</a>
+    </div>
+    <div class="navbar-user" id="navbar-user">
+      <span>Olá, <strong id="navbar-username">—</strong></span>
+      <button class="btn btn-ghost btn-sm" id="btn-logout">Sair</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">Em alta esta <span class="highlight">semana</span></h1>
+    <p class="page-desc">Os filmes e séries mais populares do momento no TMDB.</p>
+  </div>
+
+  <div id="trending-loading" class="trending-loading">Carregando títulos populares...</div>
+  <div id="trending-error" class="trending-error d-none"></div>
+  <div id="trending-grid" class="trending-grid d-none"></div>
+</div>
+</main>
+
+<footer>
+  <div class="container">
+    <span>CineAI &copy; 2026 — Powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></span>
+  </div>
+</footer>
+
+<div id="toast-container"></div>
+
+<script src="js/api.js?v=quality-1"></script>
+<script src="js/auth.js?v=quality-1"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!requireAuth()) return;
+  await initNavbar();
+  await loadTrending();
+});
+
+async function loadTrending() {
+  try {
+    const data = await api.trending();
+    renderTrending(data.results || []);
+  } catch (err) {
+    document.getElementById('trending-loading').classList.add('d-none');
+    const errEl = document.getElementById('trending-error');
+    errEl.classList.remove('d-none');
+    errEl.textContent = 'Não foi possível carregar os títulos populares no momento. ' +
+                        'Verifique sua conexão e tente novamente em alguns segundos.';
+  }
+}
+
+function renderTrending(items) {
+  document.getElementById('trending-loading').classList.add('d-none');
+  const grid = document.getElementById('trending-grid');
+  grid.classList.remove('d-none');
+  grid.innerHTML = '';
+
+  if (!items.length) {
+    const errEl = document.getElementById('trending-error');
+    errEl.classList.remove('d-none');
+    errEl.textContent = 'Nenhum título em alta encontrado no momento.';
+    return;
+  }
+
+  items.forEach((item, i) => {
+    const card = document.createElement('article');
+    card.className = 'trending-card';
+
+    const typeLabel = item.type === 'movie' ? 'Filme' : 'Série';
+    const typeClass = item.type === 'movie' ? 'movie' : 'tv';
+    const genres = item.genres ? item.genres.split('|').slice(0, 2).join(', ') : '';
+    const poster = item.poster_url
+      ? '<img src="' + esc(item.poster_url) + '" alt="' + esc(item.title) + '" loading="lazy" />'
+      : '<div class="trending-poster-placeholder">' + esc(item.title) + '</div>';
+
+    card.innerHTML =
+      '<span class="trending-rank">' + (i + 1) + '</span>' +
+      poster +
+      '<div class="trending-card-body">' +
+        '<div class="trending-card-title" title="' + esc(item.title) + '">' + esc(item.title) + '</div>' +
+        '<div class="trending-card-meta">' +
+          '<span>' + (item.year || '') + '</span>' +
+          '<span class="trending-card-rating">⭐ ' + (item.vote_avg ? item.vote_avg.toFixed(1) : 'N/A') + '</span>' +
+          '<span class="trending-card-type ' + typeClass + '">' + typeLabel + '</span>' +
+        '</div>' +
+        '<div class="trending-card-genres">' + esc(genres) + '</div>' +
+      '</div>';
+
+    grid.appendChild(card);
+  });
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
