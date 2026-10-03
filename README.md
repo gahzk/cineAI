@@ -20,6 +20,25 @@ uvicorn app.main:app --reload --env-file .env
 
 Abra http://localhost:8000. A documentação da API fica em http://localhost:8000/api/docs.
 
+## Usar MySQL em vez de SQLite
+
+Crie o banco e um usuário no seu MySQL (8.x) ou MariaDB:
+
+```sql
+CREATE DATABASE cineai CHARACTER SET utf8mb4;
+CREATE USER 'cineai'@'localhost' IDENTIFIED BY 'troque-esta-senha';
+GRANT ALL ON cineai.* TO 'cineai'@'localhost';
+```
+
+No `backend/.env`, aponte para ele:
+
+```
+DATABASE_URL=mysql+pymysql://cineai:troque-esta-senha@localhost:3306/cineai?charset=utf8mb4
+```
+
+As tabelas são criadas sozinhas na primeira vez que o servidor sobe. Se a senha tiver `@`, `:` ou `/`, troque por `%40`, `%3A` e `%2F` na URL.
+Para abrir o site em outros aparelhos da sua rede, rode `uvicorn app.main:app --host 0.0.0.0 --env-file .env` e acesse `http://IP-do-computador:8000` (o Firewall do Windows vai pedir permissão).
+
 ## Como a recomendação funciona
 
 1. Os filtros viram uma consulta ao `/discover` do TMDB, para filmes e séries (gêneros pedidos com OU; ator, diretor, duração e classificação só existem para filmes).
@@ -57,6 +76,8 @@ A página `/admin.html` mostra contagens de uso. Para tornar uma conta admin:
 cd backend
 python -c "import sqlite3; c=sqlite3.connect('cineai.db'); c.execute(\"update users set is_admin=1 where email='voce@exemplo.com'\"); c.commit()"
 ```
+
+No MySQL: `UPDATE users SET is_admin = 1 WHERE email = 'voce@exemplo.com';`
 
 ## Limitações
 

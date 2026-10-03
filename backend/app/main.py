@@ -5,6 +5,7 @@ então uma chamada lenta ao TMDB não trava as outras requisições.
 """
 from collections import Counter
 from contextlib import asynccontextmanager
+from datetime import UTC
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -157,7 +158,7 @@ def history(user: User = Depends(auth.current_user), db: Session = Depends(get_d
     )
     return {"results": [
         {"tmdb_id": h.tmdb_id, "content_type": h.content_type, "title": h.title, "year": h.year,
-         "vote_avg": h.vote_avg, "poster_url": h.poster_url, "recommended_at": h.recommended_at,
+         "vote_avg": h.vote_avg, "poster_url": h.poster_url, "recommended_at": h.recommended_at.replace(tzinfo=UTC),
          "tmdb_url": f"https://www.themoviedb.org/{h.content_type}/{h.tmdb_id}"}
         for h in rows
     ]}

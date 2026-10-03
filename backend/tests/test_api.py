@@ -51,6 +51,8 @@ def test_busca_logada_grava_historico(client, token):
     client.post("/api/search", json={"genres": [80]}, headers=auth(token))
     hist = client.get("/api/history", headers=auth(token)).json()["results"]
     assert len(hist) == 3
+    # SQLite e MySQL devolvem a data sem fuso; a API marca como UTC para o navegador converter.
+    assert hist[0]["recommended_at"].endswith(("Z", "+00:00"))
 
 
 def test_filtro_invalido_e_422(client):
