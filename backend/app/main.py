@@ -1,132 +1,193 @@
-# -*- coding: utf-8 -*-
-"""
-CineAI — FastAPI application entry point.
+"""CineAI: API JSON em /api e o frontend estático em /, no mesmo processo.
 
-Startup sequence:
-1. Initialize SQLite/PostgreSQL schema (dev uses SQLite via aiosqlite)
-2. Pre-warm TMDB genres cache so the first request is fast
-3. Register all routers under /api/v1
+As rotas são `def` (não `async def`) de propósito: o FastAPI roda cada uma numa thread,
+então uma chamada lenta ao TMDB não trava as outras requisições.
 """
-import logging
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from collections import Counter
+from contextlib import asynccontextmanager
+from datetime import UTC
 from pathlib import Path
-from sqlalchemy import text
 
-from app.config import settings
-from app.database import database_url, engine, init_db
-from app.routers import auth, recommendations, analytics
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
-logging.basicConfig(level=logging.WARNING)
-log = logging.getLogger("cineai")
+from app import auth, nl, tmdb
+from app.db import History, User, get_db, init_db
+from app.ranking import Filters, recommend
 
-app = FastAPI(
-    title="CineAI API",
-    description="RESTful backend for the CineAI movie & series recommendation system.",
-    version="2.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
-)
+FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="CineAI", version="3.0.0", docs_url="/api/docs", redoc_url=None,
+              openapi_url="/api/openapi.json", lifespan=lifespan)
+
+
+@app.exception_handler(tmdb.TMDBError)
+def tmdb_error(_: Request, exc: tmdb.TMDBError) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
 
 # ---------------------------------------------------------------------------
-# CORS
+# Modelos de entrada e saída
 # ---------------------------------------------------------------------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    # JWT via Authorization header — não precisa de credenciais de cookie
-    # Permite usar allow_origins=["*"] sem quebrar o CORS preflight do navegador
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class RegisterIn(BaseModel):
+    email: EmailStr
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=72)
 
-# ---------------------------------------------------------------------------
-# Routers
-# ---------------------------------------------------------------------------
-API_PREFIX = "/api/v1"
-app.include_router(auth.router, prefix=API_PREFIX)
-app.include_router(recommendations.router, prefix=API_PREFIX)
-app.include_router(analytics.router, prefix=API_PREFIX)
 
-# ---------------------------------------------------------------------------
-# Static frontend (served from ../frontend)
-# ---------------------------------------------------------------------------
-_FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend"
-if _FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR)), name="static")
-    app.mount("/css", StaticFiles(directory=str(_FRONTEND_DIR / "css")), name="css")
-    app.mount("/js", StaticFiles(directory=str(_FRONTEND_DIR / "js")), name="js")
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str = Field(max_length=72)
 
-    @app.get("/", include_in_schema=False)
-    async def serve_index():
-        return FileResponse(
-            str(_FRONTEND_DIR / "index.html"),
-            headers={"Cache-Control": "no-store, max-age=0"},
-        )
 
-    @app.get("/login", include_in_schema=False)
-    async def serve_login():
-        return FileResponse(
-            str(_FRONTEND_DIR / "login.html"),
-            headers={"Cache-Control": "no-store, max-age=0"},
-        )
+class TextSearchIn(BaseModel):
+    text: str = Field(min_length=3, max_length=300)
 
-    @app.get("/dashboard", include_in_schema=False)
-    async def serve_dashboard():
-        return FileResponse(
-            str(_FRONTEND_DIR / "dashboard.html"),
-            headers={"Cache-Control": "no-store, max-age=0"},
-        )
 
-    @app.get("/trending", include_in_schema=False)
-    async def serve_trending():
-        return FileResponse(
-            str(_FRONTEND_DIR / "trending.html"),
-            headers={"Cache-Control": "no-store, max-age=0"},
-        )
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
-    @app.get("/favicon.ico", include_in_schema=False)
-    async def serve_favicon():
-        # Serve o SVG como favicon — navegadores modernos aceitam.
-        return FileResponse(
-            str(_FRONTEND_DIR / "favicon.svg"),
-            media_type="image/svg+xml",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+    username: str
+    is_admin: bool
+
 
 # ---------------------------------------------------------------------------
-# Startup
+# Autenticação
 # ---------------------------------------------------------------------------
-@app.on_event("startup")
-async def on_startup():
-    log.info("CineAI starting up...")
-    await init_db()
-    # Pre-warm genres cache (non-blocking — best-effort)
-    try:
-        from app.services.tmdb import get_genres
-        get_genres()
-        log.info("TMDB genres cache warmed up.")
-    except Exception as exc:
-        log.warning("Could not pre-warm genres cache: %s", exc)
+@app.post("/api/auth/register", response_model=TokenOut, status_code=201, tags=["auth"])
+def register(body: RegisterIn, db: Session = Depends(get_db)):
+    if db.scalar(select(User).where(User.email == body.email)):
+        raise HTTPException(400, "Este e-mail já tem conta.")
+    if db.scalar(select(User).where(User.username == body.username)):
+        raise HTTPException(400, "Este nome de usuário já está em uso.")
+    user = User(email=body.email, username=body.username, hashed_password=auth.hash_password(body.password))
+    db.add(user)
+    db.commit()
+    return TokenOut(access_token=auth.create_token(user.id))
 
 
-@app.get("/api/health", tags=["health"])
-async def health():
-    return {"status": "ok", "version": "2.0.0"}
+@app.post("/api/auth/login", response_model=TokenOut, tags=["auth"])
+def login(body: LoginIn, db: Session = Depends(get_db)):
+    key = f"login:{body.email.lower()}"
+    auth.check_rate(key, limit=10, window_s=15 * 60)
+    user = db.scalar(select(User).where(User.email == body.email))
+    if not user or not auth.verify_password(body.password, user.hashed_password):
+        auth.record(key)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "E-mail ou senha incorretos.")
+    auth.clear(key)
+    return TokenOut(access_token=auth.create_token(user.id))
 
 
-@app.get("/api/health/db", tags=["health"])
-async def database_health():
-    async with engine.connect() as conn:
-        await conn.execute(text("SELECT 1"))
+@app.get("/api/auth/me", response_model=UserOut, tags=["auth"])
+def me(user: User = Depends(auth.current_user)):
+    return user
 
+
+# ---------------------------------------------------------------------------
+# Busca
+# ---------------------------------------------------------------------------
+@app.get("/api/options", tags=["busca"])
+def options():
+    """Listas para montar o formulário: gêneros, streaming e se a busca por texto está ligada."""
+    genres = sorted(tmdb.genres("movie").items(), key=lambda g: g[1])
     return {
-        "status": "ok",
-        "database": database_url.get_backend_name(),
-        "driver": database_url.get_driver_name(),
+        "genres": [{"id": gid, "name": name} for gid, name in genres],
+        "providers": tmdb.providers(),
+        "text_search": nl.enabled(),
     }
+
+
+@app.post("/api/search", tags=["busca"])
+def search(f: Filters, user: User | None = Depends(auth.optional_user), db: Session = Depends(get_db)):
+    """Top 3 para os filtros. Logado, o resultado entra no histórico."""
+    results, total = recommend(f)
+    if user and results:
+        _save_history(db, user, results)
+    return {"results": results, "total_candidates": total, "filters": f}
+
+
+@app.post("/api/search/text", tags=["busca"])
+def search_text(body: TextSearchIn, user: User = Depends(auth.current_user), db: Session = Depends(get_db)):
+    """Pedido em linguagem natural -> filtros (Claude) -> mesma busca do formulário."""
+    key = f"ai:{user.id}"
+    auth.check_rate(key, limit=20, window_s=60 * 60)
+    auth.record(key)
+    try:
+        f = nl.text_to_filters(body.text)
+    except nl.AIUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
+    results, total = recommend(f)
+    if results:
+        _save_history(db, user, results)
+    return {"results": results, "total_candidates": total, "filters": f}
+
+
+@app.get("/api/trending", tags=["busca"])
+def trending():
+    return {"results": tmdb.trending()[:20]}
+
+
+def _save_history(db: Session, user: User, results: list[dict]) -> None:
+    db.add_all(History(
+        user_id=user.id, tmdb_id=r["tmdb_id"], content_type=r["content_type"], title=r["title"],
+        genres="|".join(r["genres"]), vote_avg=r["vote_avg"], year=r["year"], poster_url=r["poster_url"],
+    ) for r in results)
+    db.commit()
+
+
+@app.get("/api/history", tags=["usuário"])
+def history(user: User = Depends(auth.current_user), db: Session = Depends(get_db)):
+    rows = db.scalars(
+        select(History).where(History.user_id == user.id).order_by(History.recommended_at.desc()).limit(30)
+    )
+    return {"results": [
+        {"tmdb_id": h.tmdb_id, "content_type": h.content_type, "title": h.title, "year": h.year,
+         "vote_avg": h.vote_avg, "poster_url": h.poster_url, "recommended_at": h.recommended_at.replace(tzinfo=UTC),
+         "tmdb_url": f"https://www.themoviedb.org/{h.content_type}/{h.tmdb_id}"}
+        for h in rows
+    ]}
+
+
+# ---------------------------------------------------------------------------
+# Admin
+# ---------------------------------------------------------------------------
+@app.get("/api/admin/summary", tags=["admin"])
+def admin_summary(_: User = Depends(auth.admin_user), db: Session = Depends(get_db)):
+    genre_count = Counter(g for row in db.scalars(select(History.genres)) for g in row.split("|") if g)
+    top_titles = db.execute(
+        select(History.title, History.content_type, func.count().label("n"))
+        .group_by(History.tmdb_id, History.content_type, History.title)
+        .order_by(func.count().desc()).limit(10)
+    )
+    return {
+        "users": db.scalar(select(func.count()).select_from(User)),
+        "recommendations": db.scalar(select(func.count()).select_from(History)),
+        "top_genres": [{"name": g, "count": n} for g, n in genre_count.most_common(10)],
+        "top_titles": [{"title": t, "content_type": k, "count": n} for t, k, n in top_titles],
+    }
+
+
+@app.get("/api/health", tags=["admin"])
+def health():
+    return {"status": "ok"}
+
+
+# O frontend vem por último para não esconder as rotas /api.
+if FRONTEND.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="frontend")
