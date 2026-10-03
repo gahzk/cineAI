@@ -1,50 +1,26 @@
-# -*- coding: utf-8 -*-
-"""Application settings loaded from environment variables."""
-import tempfile
-from pathlib import Path
-from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings
+"""Configuração lida das variáveis de ambiente (carregue o .env com `uvicorn --env-file .env`)."""
+import os
+
+_OLD_DEFAULT_KEY = "change-me-in-production-use-secrets"
 
 
-class Settings(BaseSettings):
-    # --- API ---
-    TMDB_BEARER_TOKEN: str = Field(
-        default="",
-        validation_alias=AliasChoices("TMDB_BEARER_TOKEN", "TMDB_TOKEN"),
-    )
-    TMDB_API_KEY: str = Field(default="", validation_alias="TMDB_API_KEY")
-    TMDB_BASE_URL: str = "https://api.themoviedb.org/3"
-    TMDB_IMAGE_BASE_URL: str = "https://image.tmdb.org/t/p/w500"
-
-    # --- Database ---
-    DATABASE_URL: str = "sqlite+aiosqlite:///./cineai.db"
-    DB_ECHO: bool = False
-    DB_POOL_SIZE: int = 5
-    DB_MAX_OVERFLOW: int = 10
-    DB_DISABLE_PREPARED_STATEMENT_CACHE: bool = False
-
-    # --- Auth / JWT ---
-    SECRET_KEY: str = "change-me-in-production-use-secrets"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-
-    # --- Cache ---
-    CACHE_DIR: Path = Path(tempfile.gettempdir()) / "cineai_cache"
-    CACHE_EXPIRATION_DAYS: int = 7
-    CATALOG_TARGET: int = 2500
-
-    # --- CORS ---
-    CORS_ORIGINS: list[str] = ["*"]
-
-    # --- Rate limiting ---
-    MIN_REQUEST_INTERVAL: float = 0.05
-    HTTP_WORKERS: int = 10
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+def _secret_key() -> str:
+    key = os.getenv("SECRET_KEY", "").strip()
+    if not key or key == _OLD_DEFAULT_KEY:
+        raise RuntimeError(
+            "Defina SECRET_KEY no .env. Gere uma com: "
+            'python -c "import secrets; print(secrets.token_hex(32))"'
+        )
+    return key
 
 
-settings = Settings()
-settings.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+SECRET_KEY = _secret_key()
+TOKEN_DAYS = int(os.getenv("TOKEN_DAYS", "7"))
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cineai.db")
+
+# TMDB_BEARER_TOKEN é o nome antigo; continua aceito para não quebrar .env existentes.
+TMDB_TOKEN = (os.getenv("TMDB_TOKEN") or os.getenv("TMDB_BEARER_TOKEN") or "").strip()
+
+# Busca em linguagem natural. Sem chave, o recurso fica desligado e o formulário continua funcionando.
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
+AI_MODEL = os.getenv("CINEAI_MODEL", "claude-opus-5-5")
