@@ -6,6 +6,7 @@ os.environ["SECRET_KEY"] = "test-secret-key-0123456789abcdef0123456789"
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{tempfile.mkdtemp()}/test.db")
 os.environ["TMDB_TOKEN"] = "fake"
 os.environ.pop("ANTHROPIC_API_KEY", None)
+os.environ.pop("OLLAMA_MODEL", None)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

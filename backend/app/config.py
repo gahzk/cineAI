@@ -24,3 +24,7 @@ TMDB_TOKEN = (os.getenv("TMDB_TOKEN") or os.getenv("TMDB_BEARER_TOKEN") or "").s
 # Busca em linguagem natural. Sem chave, o recurso fica desligado e o formulário continua funcionando.
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 AI_MODEL = os.getenv("CINEAI_MODEL", "claude-opus-5-5")
+
+# Alternativa gratuita: um modelo rodando no Ollama do próprio computador (tem prioridade sobre o Claude).
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
