@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineAI — Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="/" class="navbar-brand">Cine<span>AI</span></a>
+    <div class="navbar-nav">
+      <a href="/index.html" class="nav-link">Buscar</a>
+      <a href="/historico.html" class="nav-link" data-needs-login hidden>Minhas recomendações</a>
+      <a href="/admin.html" class="nav-link" data-needs-admin hidden>Admin</a>
+    </div>
+    <div class="navbar-user" id="navbar-user"></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="page-header">
+    <h1 class="page-title">Uso do <span class="highlight">CineAI</span></h1>
+    <p class="page-desc">Contagens a partir do histórico de recomendações dos usuários logados.</p>
+  </header>
+  <div id="admin"><div class="loading"><span class="spinner"></span>Carregando…</div></div>
+</main>
+
+<script src="/js/common.js"></script>
+<script>
+  const TYPE = { movie: 'Filme', tv: 'Série' };
+
+  function table(headers, rows) {
+    return `<div class="table-wrap"><table class="data-table">
+      <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.join('') || `<tr><td colspan="${headers.length}">Sem dados ainda.</td></tr>`}</tbody>
+    </table></div>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!getToken()) { location.href = '/login.html'; return; }
+    await initNavbar();
+    const el = document.getElementById('admin');
+    try {
+      const d = await api('GET', '/admin/summary');
+      const max = Math.max(1, ...d.top_genres.map(g => g.count));
+      el.innerHTML = `
+        <div class="kpis">
+          <div class="panel"><div class="kpi-value">${d.users}</div><div class="kpi-label">Usuários</div></div>
+          <div class="panel"><div class="kpi-value">${d.recommendations}</div><div class="kpi-label">Títulos recomendados</div></div>
+          <div class="panel"><div class="kpi-value">${esc(d.top_genres[0]?.name || '—')}</div><div class="kpi-label">Gênero mais recomendado</div></div>
+        </div>
+        <div class="two-col">
+          <section class="panel"><h2 class="section-title" style="margin-top:0">Gêneros</h2>
+            ${table(['Gênero', 'Vezes', ''], d.top_genres.map(g =>
+              `<tr><td>${esc(g.name)}</td><td class="num">${g.count}</td>
+               <td><div class="bar"><span style="width:${Math.round(g.count / max * 100)}%"></span></div></td></tr>`))}
+          </section>
+          <section class="panel"><h2 class="section-title" style="margin-top:0">Títulos mais recomendados</h2>
+            ${table(['Título', 'Tipo', 'Vezes'], d.top_titles.map(t =>
+              `<tr><td>${esc(t.title)}</td><td>${esc(TYPE[t.content_type])}</td><td class="num">${t.count}</td></tr>`))}
+          </section>
+        </div>`;
+    } catch (err) {
+      el.innerHTML = `<div class="alert alert-error">${esc(err.message)}</div>`;
+    }
+  });
+</script>
+</body>
+</html>

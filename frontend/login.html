@@ -1,192 +1,77 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CineAI — Entrar</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=minimal-2" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
-<div class="auth-page">
+<main class="auth-page">
   <div class="auth-box">
-
-    <!-- Logo -->
     <div class="auth-logo">
-      <div class="auth-logo-text">Cine<span>AI</span></div>
-      <div class="auth-logo-tagline">Recomendações inteligentes de filmes e séries</div>
+      <a href="/" class="auth-logo-text" style="text-decoration:none">Cine<span>AI</span></a>
+      <p class="auth-logo-tagline">Entre para guardar suas recomendações e pedir à IA.</p>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="login">Entrar</button>
-      <button class="tab-btn" data-tab="register">Criar conta</button>
-    </div>
-
-    <!-- Alert area -->
-    <div id="auth-alert" class="d-none"></div>
-
-    <!-- Login Tab -->
-    <div class="tab-content active" id="tab-login">
-      <form id="form-login" novalidate>
-        <div class="form-group">
-          <label class="form-label" for="login-email">E-mail</label>
-          <input
-            class="form-control"
-            type="email"
-            id="login-email"
-            name="email"
-            placeholder="seu@email.com"
-            autocomplete="email"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="login-password">Senha</label>
-          <input
-            class="form-control"
-            type="password"
-            id="login-password"
-            name="password"
-            placeholder="••••••••"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-        <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-login">
-          <span id="btn-login-text">Entrar</span>
-          <span id="btn-login-spinner" class="spinner d-none"></span>
-        </button>
-      </form>
-    </div>
-
-    <!-- Register Tab -->
-    <div class="tab-content" id="tab-register">
-      <form id="form-register" novalidate>
-        <div class="form-group">
-          <label class="form-label" for="reg-username">Nome de usuário</label>
-          <input
-            class="form-control"
-            type="text"
-            id="reg-username"
-            name="username"
-            placeholder="cinefilo123"
-            autocomplete="username"
-            required
-            minlength="3"
-            maxlength="50"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-email">E-mail</label>
-          <input
-            class="form-control"
-            type="email"
-            id="reg-email"
-            name="email"
-            placeholder="seu@email.com"
-            autocomplete="email"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-password">Senha</label>
-          <input
-            class="form-control"
-            type="password"
-            id="reg-password"
-            name="password"
-            placeholder="mínimo 6 caracteres"
-            autocomplete="new-password"
-            required
-            minlength="6"
-          />
-          <div class="form-hint">Mínimo de 6 caracteres</div>
-        </div>
-        <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-register">
-          <span id="btn-register-text">Criar conta</span>
-          <span id="btn-register-spinner" class="spinner d-none"></span>
-        </button>
-      </form>
-    </div>
-
+    <form id="auth-form" class="panel" novalidate>
+      <h1 class="section-title" id="form-title" style="margin-top:0">Entrar</h1>
+      <div class="form-group" id="username-group" hidden>
+        <label class="form-label" for="username">Nome de usuário</label>
+        <input class="form-control" id="username" name="username" autocomplete="username" minlength="3" maxlength="50">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">E-mail</label>
+        <input class="form-control" id="email" name="email" type="email" autocomplete="email" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Senha</label>
+        <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="72">
+        <span class="form-hint" id="password-hint" hidden>Mínimo de 8 caracteres.</span>
+      </div>
+      <button class="btn btn-primary btn-full" type="submit" id="submit">Entrar</button>
+      <div id="alert" role="alert"></div>
+      <p class="auth-switch"><span id="switch-text">Não tem conta?</span> <a href="#" id="switch">Criar conta</a></p>
+    </form>
   </div>
-</div>
+</main>
 
-<div id="toast-container"></div>
-
-<script src="js/api.js?v=minimal-2"></script>
-<script src="js/auth.js?v=minimal-2"></script>
+<script src="/js/common.js"></script>
 <script>
-  // If already logged in, redirect
-  if (localStorage.getItem('cineai_token')) {
-    window.location.href = '/';
-  }
+  if (getToken()) location.href = '/';
 
-  // Tabs
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      document.getElementById('auth-alert').className = 'd-none';
-    });
+  let registering = false;
+  const $ = id => document.getElementById(id);
+
+  $('switch').addEventListener('click', (e) => {
+    e.preventDefault();
+    registering = !registering;
+    $('form-title').textContent = registering ? 'Criar conta' : 'Entrar';
+    $('submit').textContent = registering ? 'Criar conta' : 'Entrar';
+    $('switch-text').textContent = registering ? 'Já tem conta?' : 'Não tem conta?';
+    $('switch').textContent = registering ? 'Entrar' : 'Criar conta';
+    $('username-group').hidden = !registering;
+    $('password-hint').hidden = !registering;
+    $('password').autocomplete = registering ? 'new-password' : 'current-password';
+    $('alert').innerHTML = '';
   });
 
-  function showAuthAlert(message, type = 'error') {
-    const el = document.getElementById('auth-alert');
-    el.className = `alert alert-${type}`;
-    el.textContent = message;
-  }
-
-  function setLoading(formId, loading) {
-    const prefix = formId === 'form-login' ? 'btn-login' : 'btn-register';
-    document.getElementById(prefix + '-text').textContent = loading
-      ? (formId === 'form-login' ? 'Entrando...' : 'Criando conta...')
-      : (formId === 'form-login' ? 'Entrar' : 'Criar conta');
-    document.getElementById(prefix + '-spinner').classList.toggle('d-none', !loading);
-    document.getElementById(prefix.replace('-text','').replace('-spinner','')).disabled = loading;
-  }
-
-  // Login
-  document.getElementById('form-login').addEventListener('submit', async (e) => {
+  $('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    if (!email || !password) { showAuthAlert('Preencha todos os campos.'); return; }
-    setLoading('form-login', true);
+    const body = { email: $('email').value.trim(), password: $('password').value };
+    if (registering) body.username = $('username').value.trim();
+    $('submit').disabled = true;
     try {
-      const data = await api.login(email, password);
-      localStorage.setItem('cineai_token', data.access_token);
-      window.location.href = '/';
+      const data = await api('POST', registering ? '/auth/register' : '/auth/login', body);
+      setToken(data.access_token);
+      location.href = '/';
     } catch (err) {
-      showAuthAlert(err.message || 'Credenciais inválidas.');
+      $('alert').innerHTML = `<div class="alert alert-error">${esc(err.message)}</div>`;
     } finally {
-      setLoading('form-login', false);
-    }
-  });
-
-  // Register
-  document.getElementById('form-register').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('reg-username').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
-    if (!username || !email || !password) { showAuthAlert('Preencha todos os campos.'); return; }
-    if (password.length < 6) { showAuthAlert('A senha deve ter pelo menos 6 caracteres.'); return; }
-    setLoading('form-register', true);
-    try {
-      const data = await api.register(username, email, password);
-      localStorage.setItem('cineai_token', data.access_token);
-      window.location.href = '/';
-    } catch (err) {
-      showAuthAlert(err.message || 'Erro ao criar conta.');
-    } finally {
-      setLoading('form-register', false);
+      $('submit').disabled = false;
     }
   });
 </script>

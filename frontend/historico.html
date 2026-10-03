@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineAI — Minhas recomendações</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="/" class="navbar-brand">Cine<span>AI</span></a>
+    <div class="navbar-nav">
+      <a href="/index.html" class="nav-link">Buscar</a>
+      <a href="/historico.html" class="nav-link" data-needs-login hidden>Minhas recomendações</a>
+      <a href="/admin.html" class="nav-link" data-needs-admin hidden>Admin</a>
+    </div>
+    <div class="navbar-user" id="navbar-user"></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="page-header">
+    <h1 class="page-title">Minhas <span class="highlight">recomendações</span></h1>
+    <p class="page-desc">As últimas 30 sugestões que o CineAI fez para você.</p>
+  </header>
+  <div id="history" class="poster-grid"><div class="loading"><span class="spinner"></span>Carregando…</div></div>
+</main>
+
+<script src="/js/common.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!getToken()) { location.href = '/login.html'; return; }
+    await initNavbar();
+    const el = document.getElementById('history');
+    try {
+      const { results } = await api('GET', '/history');
+      el.innerHTML = results.map(item => posterCard(item,
+        `<div class="poster-card-meta">${new Date(item.recommended_at).toLocaleDateString('pt-BR')}</div>`)).join('')
+        || '<p class="empty">Você ainda não fez nenhuma busca logado. <a href="/">Buscar agora</a>.</p>';
+    } catch (err) {
+      el.innerHTML = `<div class="alert alert-error">${esc(err.message)}</div>`;
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,214 +1,116 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CineAI — Recomendações</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=minimal-2" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineAI — O que assistir hoje</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="page-wrapper">
+<body>
 
-<!-- Navbar -->
 <nav class="navbar">
   <div class="container navbar-inner">
     <a href="/" class="navbar-brand">Cine<span>AI</span></a>
     <div class="navbar-nav">
-      <a href="/" class="nav-link active">Buscar</a>
-      <a href="/trending" class="nav-link">Populares</a>
-      <a href="/dashboard" class="nav-link" id="nav-dashboard" style="display:none">Dashboard</a>
+      <a href="/index.html" class="nav-link">Buscar</a>
+      <a href="/historico.html" class="nav-link" data-needs-login hidden>Minhas recomendações</a>
+      <a href="/admin.html" class="nav-link" data-needs-admin hidden>Admin</a>
     </div>
-    <div class="navbar-user" id="navbar-user">
-      <span>Olá, <strong id="navbar-username">—</strong></span>
-      <button class="btn btn-ghost btn-sm" id="btn-logout">Sair</button>
-    </div>
+    <div class="navbar-user" id="navbar-user"></div>
   </div>
 </nav>
 
-<main>
-<div class="container">
+<main class="container">
+  <header class="page-header">
+    <h1 class="page-title">O que assistir <span class="highlight">hoje?</span></h1>
+    <p class="page-desc">Escolha o que você quer ver e o CineAI sugere 3 títulos, explica por que e mostra onde assistir no Brasil.</p>
+  </header>
 
-  <!-- Page header -->
-  <div class="page-header">
-    <h1 class="page-title">Descubra seu próximo <span class="highlight">favorito</span></h1>
-    <p class="page-desc">Preencha suas preferências e o CineAI encontra os títulos certos para você.</p>
-  </div>
+  <section class="panel" aria-label="Busca">
+    <form id="text-form" class="text-search" hidden>
+      <label class="form-label" for="text-query" style="width:100%">Descreva com suas palavras</label>
+      <input class="form-control" id="text-query" name="text" maxlength="300"
+             placeholder="Ex.: algo tipo Interestelar, mas mais leve e com menos de 2 horas">
+      <button class="btn btn-primary" type="submit" id="text-btn">Pedir à IA</button>
+      <p class="applied" id="text-hint"></p>
+    </form>
 
-  <!-- Search panel tabs -->
-  <div class="search-panel">
-    <div class="tabs" style="margin-bottom:1.5rem">
-      <button class="tab-btn active" data-search-tab="normal">
-        Busca Rápida
-      </button>
-      <button class="tab-btn" data-search-tab="specific">
-        Busca Específica
-      </button>
-    </div>
-
-    <!-- === NORMAL SEARCH === -->
-    <div class="tab-content active" id="search-tab-normal">
-      <div class="search-panel-subtitle">Recomendações do catálogo local — resultado em segundos.</div>
-      <div class="search-form-grid">
-
-        <!-- Content type -->
-        <div class="form-group">
-          <label class="form-label">Formato</label>
-          <div class="option-group" id="normal-type">
-            <div class="option-chip selected" data-value="">Tanto faz</div>
-            <div class="option-chip" data-value="movie">Filme</div>
-            <div class="option-chip" data-value="tv">Série</div>
+    <form id="search-form">
+      <div class="form-grid">
+        <fieldset>
+          <legend>Formato</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="content_type" value="" checked><span>Tanto faz</span></label>
+            <label class="chip"><input type="radio" name="content_type" value="movie"><span>Filme</span></label>
+            <label class="chip"><input type="radio" name="content_type" value="tv"><span>Série</span></label>
           </div>
-        </div>
-
-        <!-- Genre include -->
-        <div class="form-group">
-          <label class="form-label" for="normal-genres-inc">Gêneros que curte</label>
-          <input class="form-control" type="text" id="normal-genres-inc"
-            placeholder="Ex: ação, ficção científica, terror" />
-          <div class="form-hint">Separe por vírgulas</div>
-        </div>
-
-        <!-- Genre exclude -->
-        <div class="form-group">
-          <label class="form-label" for="normal-genres-exc">Gêneros para evitar</label>
-          <input class="form-control" type="text" id="normal-genres-exc"
-            placeholder="Ex: romance, documentário" />
-          <div class="form-hint">Separe por vírgulas</div>
-        </div>
-
-        <!-- Duration -->
-        <div class="form-group">
-          <label class="form-label">Duração ideal</label>
-          <div class="option-group" id="normal-duration">
-            <div class="option-chip selected" data-value="Qualquer">Qualquer</div>
-            <div class="option-chip" data-value="Curta">Curta</div>
-            <div class="option-chip" data-value="Média">Média</div>
-            <div class="option-chip" data-value="Longa">Longa</div>
+        </fieldset>
+        <fieldset>
+          <legend>Época</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="era" value="any" checked><span>Qualquer</span></label>
+            <label class="chip"><input type="radio" name="era" value="new"><span>Recentes (2010+)</span></label>
+            <label class="chip"><input type="radio" name="era" value="classic"><span>Clássicos (até 1999)</span></label>
           </div>
-        </div>
-
-        <!-- Weight rating -->
-        <div class="form-group">
-          <label class="form-label">Peso: Nota de avaliação</label>
-          <div class="range-row">
-            <input type="range" id="normal-w-rating" min="0" max="1" step="0.1" value="0.8" />
-            <span class="range-value" id="normal-w-rating-val">0.8</span>
+        </fieldset>
+        <fieldset>
+          <legend>Ordenar por</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="order" value="balanced" checked><span>Equilibrado</span></label>
+            <label class="chip"><input type="radio" name="order" value="rating"><span>Mais bem avaliados</span></label>
+            <label class="chip"><input type="radio" name="order" value="popularity"><span>Mais populares</span></label>
           </div>
-        </div>
-
-        <!-- Weight popularity -->
-        <div class="form-group">
-          <label class="form-label">Peso: Popularidade</label>
-          <div class="range-row">
-            <input type="range" id="normal-w-pop" min="0" max="1" step="0.1" value="0.8" />
-            <span class="range-value" id="normal-w-pop-val">0.8</span>
-          </div>
-        </div>
-
-        <!-- Year preference -->
-        <div class="form-group">
-          <label class="form-label">Preferência de época</label>
-          <div class="option-group" id="normal-era">
-            <div class="option-chip selected" data-value="balanced">Equilibrado</div>
-            <div class="option-chip" data-value="new">Recentes (pós 2010)</div>
-            <div class="option-chip" data-value="classic">Clássicos (pré 2000)</div>
-          </div>
-        </div>
-
-      </div>
-      <div class="search-actions">
-        <button class="btn btn-ghost" id="btn-normal-clear">Limpar</button>
-        <button class="btn btn-primary btn-lg" id="btn-normal-search">
-          <span id="btn-normal-text">Buscar recomendações</span>
-          <span id="btn-normal-spinner" class="spinner d-none"></span>
-        </button>
-      </div>
-    </div>
-
-    <!-- === SPECIFIC SEARCH === -->
-    <div class="tab-content" id="search-tab-specific">
-      <div class="search-panel-subtitle">Busca ao vivo na API TMDB com filtros avançados.</div>
-      <div class="search-form-grid">
-
-        <!-- Content type -->
-        <div class="form-group">
-          <label class="form-label">Formato</label>
-          <div class="option-group" id="spec-type">
-            <div class="option-chip selected" data-value="">Tanto faz</div>
-            <div class="option-chip" data-value="movie">Filme</div>
-            <div class="option-chip" data-value="tv">Série</div>
-          </div>
-        </div>
-
-        <!-- Genre include -->
-        <div class="form-group">
-          <label class="form-label" for="spec-genres-inc">Gêneros que curte</label>
-          <input class="form-control" type="text" id="spec-genres-inc"
-            placeholder="Ex: crime, thriller" />
-        </div>
-
-        <!-- Genre exclude -->
-        <div class="form-group">
-          <label class="form-label" for="spec-genres-exc">Gêneros para evitar</label>
-          <input class="form-control" type="text" id="spec-genres-exc"
-            placeholder="Ex: comédia" />
-        </div>
-
-        <!-- Weight rating -->
-        <div class="form-group">
-          <label class="form-label">Peso: Nota</label>
-          <div class="range-row">
-            <input type="range" id="spec-w-rating" min="0" max="1" step="0.1" value="0.8" />
-            <span class="range-value" id="spec-w-rating-val">0.8</span>
-          </div>
-        </div>
-
+        </fieldset>
       </div>
 
-      <!-- Specific filters -->
-      <div class="specific-fields">
-        <div class="specific-fields-title">Filtros Específicos</div>
-        <div class="search-form-grid">
+      <fieldset style="margin-top:1.1rem">
+        <legend>Gêneros que você quer</legend>
+        <div class="chips" id="genres"></div>
+      </fieldset>
+
+      <details class="advanced">
+        <summary>Mais filtros</summary>
+        <div class="form-grid">
+          <fieldset>
+            <legend>Duração (filmes)</legend>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="duration" value="any" checked><span>Qualquer</span></label>
+              <label class="chip"><input type="radio" name="duration" value="short"><span>Até 1h40</span></label>
+              <label class="chip"><input type="radio" name="duration" value="medium"><span>1h30 a 2h20</span></label>
+              <label class="chip"><input type="radio" name="duration" value="long"><span>Mais de 2h20</span></label>
+            </div>
+          </fieldset>
           <div class="form-group">
-            <label class="form-label" for="spec-keyword">Palavra-chave / Tema</label>
-            <input class="form-control" type="text" id="spec-keyword"
-              placeholder="Ex: cyberpunk, viagem no tempo" />
+            <label class="form-label" for="provider">Está no streaming</label>
+            <select class="form-control" id="provider" name="provider"><option value="">Qualquer</option></select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="spec-actor">Ator / Atriz</label>
-            <input class="form-control" type="text" id="spec-actor"
-              placeholder="Ex: Tom Hanks" />
+            <label class="form-label" for="keyword">Tema</label>
+            <input class="form-control" id="keyword" name="keyword" maxlength="100" placeholder="Ex.: viagem no tempo">
           </div>
           <div class="form-group">
-            <label class="form-label" for="spec-director">Diretor(a)</label>
-            <input class="form-control" type="text" id="spec-director"
-              placeholder="Ex: Christopher Nolan" />
+            <label class="form-label" for="actor">Ator ou atriz</label>
+            <input class="form-control" id="actor" name="actor" maxlength="100" placeholder="Ex.: Fernanda Montenegro">
+            <span class="form-hint">Ator e diretor buscam só filmes.</span>
           </div>
           <div class="form-group">
-            <label class="form-label" for="spec-company">Produtora / Estúdio</label>
-            <input class="form-control" type="text" id="spec-company"
-              placeholder="Ex: A24, Marvel" />
+            <label class="form-label" for="director">Direção</label>
+            <input class="form-control" id="director" name="director" maxlength="100" placeholder="Ex.: Christopher Nolan">
           </div>
           <div class="form-group">
-            <label class="form-label" for="spec-network">Streaming / Rede</label>
-            <input class="form-control" type="text" id="spec-network"
-              placeholder="Ex: HBO, Netflix" />
+            <label class="form-label" for="year">Ano</label>
+            <input class="form-control" id="year" name="year" type="number" min="1888" max="2100" placeholder="Ex.: 1999">
           </div>
           <div class="form-group">
-            <label class="form-label" for="spec-year">Ano de lançamento</label>
-            <input class="form-control" type="number" id="spec-year"
-              placeholder="Ex: 1999" min="1888" max="2030" />
+            <label class="form-label" for="min_vote">Nota mínima (0 a 10)</label>
+            <input class="form-control" id="min_vote" name="min_vote" type="number" min="0" max="10" step="0.5" placeholder="Ex.: 7.5">
           </div>
           <div class="form-group">
-            <label class="form-label" for="spec-min-vote">Nota mínima (0–10)</label>
-            <input class="form-control" type="number" id="spec-min-vote"
-              placeholder="Ex: 8.5" min="0" max="10" step="0.1" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="spec-rating-br">Classificação BR máxima</label>
-            <select class="form-control" id="spec-rating-br">
+            <label class="form-label" for="rating_br">Classificação indicativa máxima</label>
+            <select class="form-control" id="rating_br" name="rating_br">
               <option value="">Qualquer</option>
               <option value="L">Livre</option>
               <option value="10">10 anos</option>
@@ -217,67 +119,35 @@
               <option value="16">16 anos</option>
               <option value="18">18 anos</option>
             </select>
+            <span class="form-hint">Vale só para filmes.</span>
           </div>
         </div>
+        <fieldset style="margin-top:1.1rem">
+          <legend>Gêneros para evitar</legend>
+          <div class="chips exclude" id="exclude-genres"></div>
+        </fieldset>
+      </details>
+
+      <div class="form-actions">
+        <button class="btn btn-ghost" type="reset">Limpar</button>
+        <button class="btn btn-primary" type="submit" id="search-btn">Buscar recomendações</button>
       </div>
+    </form>
+  </section>
 
-      <div class="search-actions">
-        <button class="btn btn-ghost" id="btn-spec-clear">Limpar</button>
-        <button class="btn btn-primary btn-lg" id="btn-spec-search">
-          <span id="btn-spec-text">Buscar na API</span>
-          <span id="btn-spec-spinner" class="spinner d-none"></span>
-        </button>
-      </div>
-    </div>
-  </div>
+  <section id="results" aria-live="polite"></section>
 
-  <!-- Results -->
-  <div class="results-section" id="results-section">
-
-    <!-- Initial state -->
-    <div class="empty-state" id="state-empty">
-      <div class="empty-state-icon">🎬</div>
-      <div class="empty-state-title">Pronto para descobrir!</div>
-      <div class="empty-state-desc">Configure suas preferências acima e clique em Buscar.</div>
-    </div>
-
-    <!-- Loading state -->
-    <div class="loading-overlay d-none" id="state-loading">
-      <div class="spinner"></div>
-      <span id="loading-text">Calculando recomendações...</span>
-    </div>
-
-    <!-- Results -->
-    <div class="d-none" id="state-results">
-      <div class="results-header">
-        <div>
-          <div class="results-title" id="results-title">Top 3 Recomendações</div>
-          <div class="results-meta" id="results-meta"></div>
-        </div>
-      </div>
-      <div class="results-grid" id="results-grid"></div>
-    </div>
-
-    <!-- Error state -->
-    <div class="d-none" id="state-error">
-      <div class="alert alert-error" id="error-message"></div>
-    </div>
-
-  </div>
-
-</div>
+  <section id="trending-section">
+    <h2 class="section-title">Em alta esta semana</h2>
+    <div id="trending" class="poster-grid"><div class="loading"><span class="spinner"></span>Carregando…</div></div>
+  </section>
 </main>
 
 <footer>
-  <div class="container">
-    <span>CineAI &copy; 2026 — Powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></span>
-  </div>
+  <div class="container">CineAI · dados de <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a> · busca por texto com Claude</div>
 </footer>
 
-<div id="toast-container"></div>
-
-<script src="js/api.js?v=minimal-2"></script>
-<script src="js/auth.js?v=minimal-2"></script>
-<script src="js/app.js?v=minimal-2"></script>
+<script src="/js/common.js"></script>
+<script src="/js/index.js"></script>
 </body>
 </html>
