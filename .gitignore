@@ -19,6 +19,8 @@ build/
 
 # --- TMDB cache ---
 cineai_cache/
+.pytest_cache/
+.ruff_cache/
 
 # --- Logs ---
 *.log
