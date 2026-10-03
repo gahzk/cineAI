@@ -56,7 +56,7 @@ def discover_params(kind: str, f: Filters) -> dict | None:
 
     p: dict = {
         "sort_by": "vote_average.desc" if f.order == "rating" else "popularity.desc",
-        "vote_count.gte": 300 if f.order == "rating" else 100,
+        "vote_count.gte": 200 if f.order == "rating" else 50,
     }
     if include:
         p["with_genres"] = "|".join(map(str, include))  # | = OU; vírgula seria E

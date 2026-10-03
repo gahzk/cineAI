@@ -16,7 +16,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import auth, nl, tmdb
-from app.db import History, User, get_db, init_db
+from app.config import ADMIN_EMAIL, ADMIN_PASSWORD
+from app.db import History, SessionLocal, User, get_db, init_db
 from app.ranking import Filters, recommend
 
 FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
@@ -25,7 +26,27 @@ FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    ensure_admin()
     yield
+
+
+def ensure_admin() -> None:
+    """Garante a conta de ADMIN_EMAIL como admin; cria com ADMIN_PASSWORD se ainda não existir."""
+    if not ADMIN_EMAIL:
+        return
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(func.lower(User.email) == ADMIN_EMAIL))
+        if user is None and ADMIN_PASSWORD:
+            base = ADMIN_EMAIL.split("@")[0][:40] or "admin"
+            username, n = base, 1
+            while db.scalar(select(User).where(User.username == username)):
+                n += 1
+                username = f"{base}{n}"
+            user = User(email=ADMIN_EMAIL, username=username, hashed_password=auth.hash_password(ADMIN_PASSWORD))
+            db.add(user)
+        if user is not None:
+            user.is_admin = True
+            db.commit()
 
 
 app = FastAPI(title="CineAI", version="3.0.0", docs_url="/api/docs", redoc_url=None,
@@ -76,7 +97,8 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
         raise HTTPException(400, "Este e-mail já tem conta.")
     if db.scalar(select(User).where(User.username == body.username)):
         raise HTTPException(400, "Este nome de usuário já está em uso.")
-    user = User(email=body.email, username=body.username, hashed_password=auth.hash_password(body.password))
+    user = User(email=body.email, username=body.username, hashed_password=auth.hash_password(body.password),
+                is_admin=bool(ADMIN_EMAIL) and body.email.lower() == ADMIN_EMAIL)
     db.add(user)
     db.commit()
     return TokenOut(access_token=auth.create_token(user.id))
@@ -180,6 +202,22 @@ def admin_summary(_: User = Depends(auth.admin_user), db: Session = Depends(get_
         "recommendations": db.scalar(select(func.count()).select_from(History)),
         "top_genres": [{"name": g, "count": n} for g, n in genre_count.most_common(10)],
         "top_titles": [{"title": t, "content_type": k, "count": n} for t, k, n in top_titles],
+        "user_list": [
+            {"email": u.email, "username": u.username, "is_admin": u.is_admin,
+             "created_at": u.created_at.replace(tzinfo=UTC), "recommendations": n}
+            for u, n in db.execute(
+                select(User, func.count(History.id)).outerjoin(History, History.user_id == User.id)
+                .group_by(User.id).order_by(User.created_at.desc()).limit(200)
+            )
+        ],
+        "recent": [
+            {"username": name, "title": h.title, "content_type": h.content_type,
+             "recommended_at": h.recommended_at.replace(tzinfo=UTC)}
+            for h, name in db.execute(
+                select(History, User.username).join(User, User.id == History.user_id)
+                .order_by(History.recommended_at.desc()).limit(50)
+            )
+        ],
     }
 
 

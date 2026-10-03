@@ -1,0 +1,13 @@
+CineAI - como rodar no Windows
+
+1. Instale o Python 3.11 ou mais novo: https://www.python.org/downloads/
+   Na instalação, marque "Add python.exe to PATH".
+2. (Opcional, para a busca por texto) Abra o Ollama e rode no terminal: ollama pull qwen3:4b
+3. Tenha em mãos o "API Read Access Token" do TMDB:
+   https://www.themoviedb.org/settings/api
+4. Dê dois cliques em iniciar.bat.
+   Na primeira vez ele instala tudo e pergunta o token do TMDB e se você quer usar MySQL.
+   Depois abre o site em http://localhost:8000 (se a página não carregar de primeira, atualize).
+
+Para mudar a configuração depois, edite backend\.env (ou apague para responder de novo).
+Detalhes no README.md.

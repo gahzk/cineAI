@@ -75,3 +75,30 @@ def test_recommend_devolve_top3_com_detalhes(fake_tmdb):
     assert {r["title"] for r in results} >= {"Crime Aclamado", "Série de Crime"}
     assert all(r["reasons"] and r["providers"] == ["Netflix"] for r in results)
     assert results[0]["score"] >= results[1]["score"] >= results[2]["score"]
+
+
+def test_discover_junta_varias_paginas_sem_repetir(fake_tmdb, monkeypatch):
+    def paged(path, **params):
+        fake_tmdb.calls.append((path, params))
+        if path.startswith("/genre/"):
+            return {"genres": [{"id": 80, "name": "Crime"}]}
+        n = params["page"]
+        page = [raw(id_=n * 100 + i, title=f"F{n}-{i}", genre_ids=[80]) for i in range(20)]
+        return {"total_pages": 50, "results": page + [raw(id_=1, title="Repetido", genre_ids=[80])]}
+
+    monkeypatch.setattr(tmdb, "get", paged)
+    items = tmdb.discover("movie", {"sort_by": "popularity.desc"})
+    pages = sorted(p["page"] for path, p in fake_tmdb.calls if path == "/discover/movie")
+    assert pages == list(range(1, tmdb.DISCOVER_PAGES + 1))
+    assert len(items) == tmdb.DISCOVER_PAGES * 20 + 1
+    tmdb.discover("movie", {"sort_by": "popularity.desc"})  # segunda vez vem do cache
+    assert len([c for c in fake_tmdb.calls if c[0] == "/discover/movie"]) == tmdb.DISCOVER_PAGES
+
+
+def test_streamings_em_ordem_alfabetica_sem_acento(fake_tmdb, monkeypatch):
+    def prov(path, **params):
+        return {"results": [{"provider_id": i, "provider_name": n} for i, n in
+                            enumerate(["Netflix", "amazon Prime Video", "Ápple TV", "Globoplay"])]}
+
+    monkeypatch.setattr(tmdb, "get", prov)
+    assert [p["name"] for p in tmdb.providers()] == ["amazon Prime Video", "Ápple TV", "Globoplay", "Netflix"]
