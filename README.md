@@ -7,6 +7,8 @@ Backend em Python (FastAPI + SQLAlchemy + SQLite). Frontend em HTML, CSS e JavaS
 
 ## Como rodar
 
+No Windows, o jeito mais fácil é dar dois cliques em `iniciar.bat` (veja `COMO-RODAR.txt`). Manualmente:
+
 Precisa de Python 3.11+ e de um token de leitura (v4) do TMDB.
 
 ```bash
@@ -79,14 +81,16 @@ Os testes usam um TMDB falso e não precisam de internet nem de tokens. O CI rod
 
 ## Administrador
 
-A página `/admin.html` mostra contagens de uso. Para tornar uma conta admin:
+A página `/admin.html` mostra os usuários cadastrados, as últimas recomendações e os gêneros e títulos mais recomendados. Para ter acesso, coloque no `backend/.env`:
 
-```bash
-cd backend
-python -c "import sqlite3; c=sqlite3.connect('cineai.db'); c.execute(\"update users set is_admin=1 where email='voce@exemplo.com'\"); c.commit()"
+```
+ADMIN_EMAIL=voce@exemplo.com
+ADMIN_PASSWORD=uma-senha-forte
 ```
 
-No MySQL: `UPDATE users SET is_admin = 1 WHERE email = 'voce@exemplo.com';`
+Ao subir, o servidor cria essa conta (se ainda não existir) e a marca como admin. O `iniciar.bat` pergunta esses dados na primeira vez.
+
+Para abrir o banco diretamente: o SQLite fica em `backend/cineai.db` e abre no [DB Browser for SQLite](https://sqlitebrowser.org/) (grátis); no MySQL, use o MySQL Workbench.
 
 ## Limitações
 

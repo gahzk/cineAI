@@ -75,6 +75,28 @@ def test_admin_exige_permissao(client, token):
     resumo = client.get("/api/admin/summary", headers=auth(token)).json()
     assert resumo["users"] == 1 and resumo["recommendations"] == 3
     assert resumo["top_genres"][0]["name"] in {"Crime", "Drama"}
+    assert resumo["user_list"][0]["email"] == ANA["email"] and resumo["user_list"][0]["recommendations"] == 3
+    assert len(resumo["recent"]) == 3 and resumo["recent"][0]["username"] == "ana"
+
+
+def test_admin_email_cria_conta_e_promove(client, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "ADMIN_EMAIL", "dono@exemplo.com")
+    monkeypatch.setattr(main, "ADMIN_PASSWORD", "senha-do-dono")
+    main.ensure_admin()
+    main.ensure_admin()  # rodar de novo não duplica
+    r = client.post("/api/auth/login", json={"email": "dono@exemplo.com", "password": "senha-do-dono"})
+    me = client.get("/api/auth/me", headers=auth(r.json()["access_token"])).json()
+    assert me["is_admin"] and me["username"] == "dono"
+
+
+def test_cadastro_com_admin_email_vira_admin(client, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "ADMIN_EMAIL", "ana@exemplo.com")
+    r = client.post("/api/auth/register", json=ANA)
+    assert client.get("/api/auth/me", headers=auth(r.json()["access_token"])).json()["is_admin"]
 
 
 def test_busca_por_texto_desligada_sem_chave(client, token):

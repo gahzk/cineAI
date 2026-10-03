@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0d">
   <title>CineAI — Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,7 +26,7 @@
 <main class="container">
   <header class="page-header">
     <h1 class="page-title">Uso do <span class="highlight">CineAI</span></h1>
-    <p class="page-desc">Contagens a partir do histórico de recomendações dos usuários logados.</p>
+    <p class="page-desc">Usuários cadastrados e o que o CineAI recomendou para quem estava logado.</p>
   </header>
   <div id="admin"><div class="loading"><span class="spinner"></span>Carregando…</div></div>
 </main>
@@ -33,6 +34,7 @@
 <script src="/js/common.js"></script>
 <script>
   const TYPE = { movie: 'Filme', tv: 'Série' };
+  const date = iso => esc(new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }));
 
   function table(headers, rows) {
     return `<div class="table-wrap"><table class="data-table">
@@ -64,7 +66,17 @@
             ${table(['Título', 'Tipo', 'Vezes'], d.top_titles.map(t =>
               `<tr><td>${esc(t.title)}</td><td>${esc(TYPE[t.content_type])}</td><td class="num">${t.count}</td></tr>`))}
           </section>
-        </div>`;
+        </div>
+        <section class="panel" style="margin-top:1.5rem"><h2 class="section-title" style="margin-top:0">Usuários</h2>
+          ${table(['E-mail', 'Usuário', 'Admin', 'Cadastro', 'Recomendações'], d.user_list.map(u =>
+            `<tr><td>${esc(u.email)}</td><td>${esc(u.username)}</td><td>${u.is_admin ? 'Sim' : ''}</td>
+             <td>${date(u.created_at)}</td><td class="num">${u.recommendations}</td></tr>`))}
+        </section>
+        <section class="panel" style="margin-top:1.5rem"><h2 class="section-title" style="margin-top:0">Últimas recomendações</h2>
+          ${table(['Quando', 'Usuário', 'Título', 'Tipo'], d.recent.map(r =>
+            `<tr><td>${date(r.recommended_at)}</td><td>${esc(r.username)}</td><td>${esc(r.title)}</td>
+             <td>${esc(TYPE[r.content_type])}</td></tr>`))}
+        </section>`;
     } catch (err) {
       el.innerHTML = `<div class="alert alert-error">${esc(err.message)}</div>`;
     }

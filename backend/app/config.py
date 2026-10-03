@@ -28,3 +28,8 @@ AI_MODEL = os.getenv("CINEAI_MODEL", "claude-opus-5-5")
 # Alternativa gratuita: um modelo rodando no Ollama do próprio computador (tem prioridade sobre o Claude).
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+
+# Conta de administrador. Com as duas, a conta é criada na primeira vez que o servidor sobe;
+# só com o e-mail, quem se cadastrar com ele vira admin.
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")

@@ -1,6 +1,8 @@
 """Cliente do TMDB: uma função de GET, cache em memória e as consultas que o app usa."""
 import time
+import unicodedata
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import requests
@@ -12,6 +14,8 @@ from app.config import TMDB_TOKEN
 BASE_URL = "https://api.themoviedb.org/3"
 IMAGE_URL = "https://image.tmdb.org/t/p/w342"
 REGION = "BR"
+# Quantas páginas do Discover buscar por tipo (20 títulos cada): o catálogo de cada busca.
+DISCOVER_PAGES = 5
 
 # Séries usam gêneros combinados no TMDB. Mapeia o gênero de filme para o de série
 # quando o ID não existe nas duas listas (ex.: Ação 28 -> "Action & Adventure" 10759).
@@ -83,12 +87,17 @@ def genre_ids_for(kind: str, movie_genre_ids: list[int]) -> list[int]:
 
 
 def providers() -> list[dict]:
-    """Serviços de streaming disponíveis no Brasil, os mais relevantes primeiro."""
+    """Todos os serviços de streaming do Brasil, em ordem alfabética."""
     def load() -> list[dict]:
         data = get("/watch/providers/movie", watch_region=REGION)["results"]
-        data.sort(key=lambda p: p.get("display_priorities", {}).get(REGION, p.get("display_priority", 999)))
-        return [{"id": p["provider_id"], "name": p["provider_name"]} for p in data[:20]]
+        items = {p["provider_id"]: p["provider_name"].strip() for p in data}
+        return sorted(({"id": i, "name": n} for i, n in items.items()), key=lambda p: sort_key(p["name"]))
     return cached(("providers",), DAY, load)
+
+
+def sort_key(text: str) -> str:
+    """Chave de ordem alfabética que ignora acentos e maiúsculas (Á vem junto com A)."""
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().casefold()
 
 
 def first_id(path: str, query: str) -> int | None:
@@ -98,10 +107,27 @@ def first_id(path: str, query: str) -> int | None:
 
 
 def discover(kind: str, params: dict) -> list[dict]:
-    """Uma página do Discover, já no formato interno do app."""
-    names = genres(kind)
-    data = get(f"/discover/{kind}", include_adult="false", **params)
-    return [item for raw in data.get("results", []) if (item := to_item(raw, kind, names))]
+    """Até DISCOVER_PAGES páginas do Discover (20 títulos cada), sem repetidos, no formato do app."""
+    def load() -> list[dict]:
+        def page(n: int) -> dict:
+            return get(f"/discover/{kind}", include_adult="false", page=n, **params)
+
+        first = page(1)
+        last = min(DISCOVER_PAGES, first.get("total_pages") or 1)
+        pages = [first]
+        if last > 1:
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                pages += list(pool.map(page, range(2, last + 1)))
+        names = genres(kind)
+        seen: dict[int, dict] = {}
+        for data in pages:
+            for raw in data.get("results", []):
+                if raw.get("id") not in seen and (item := to_item(raw, kind, names)):
+                    seen[raw["id"]] = item
+        return list(seen.values())
+
+    items = cached(("discover", kind, tuple(sorted(params.items()))), 3600, load)
+    return [dict(item) for item in items]  # cópias: o ranking escreve a nota em cada item
 
 
 def trending() -> list[dict]:

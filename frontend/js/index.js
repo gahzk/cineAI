@@ -22,9 +22,108 @@ function renderOptions({ genres, providers }) {
   const chip = (name, g) => `<label class="chip"><input type="checkbox" name="${name}" value="${g.id}"><span>${esc(g.name)}</span></label>`;
   document.getElementById('genres').innerHTML = genres.map(g => chip('genres', g)).join('');
   document.getElementById('exclude-genres').innerHTML = genres.map(g => chip('exclude_genres', g)).join('');
-  document.getElementById('provider').insertAdjacentHTML('beforeend',
-    providers.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join(''));
+  setupProviderPicker(providers);
 }
+
+// ------------------------------------------------------------------
+// Janela de streamings: ordem alfabética, busca por nome e salto por letra
+// ------------------------------------------------------------------
+const plain = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+const letterOf = name => (/[A-Z]/.test(plain(name)[0]) ? plain(name)[0] : '#');
+let providerNames = new Map();
+
+function setupProviderPicker(providers) {
+  const input = document.getElementById('provider');
+  const toggle = document.getElementById('provider-toggle');
+  const pop = document.getElementById('provider-pop');
+  const search = document.getElementById('provider-search');
+  const list = document.getElementById('provider-list');
+  const az = document.getElementById('provider-az');
+
+  const sorted = [...providers].sort((a, b) => plain(a.name).localeCompare(plain(b.name), 'pt-BR'));
+  providerNames = new Map(sorted.map(p => [String(p.id), p.name]));
+  const groups = new Map();
+  for (const p of sorted) {
+    const l = letterOf(p.name);
+    if (!groups.has(l)) groups.set(l, []);
+    groups.get(l).push(p);
+  }
+  const option = (id, name) =>
+    `<button type="button" class="picker-option" role="option" data-id="${id}" data-name="${esc(plain(name))}">${esc(name)}</button>`;
+  const ordered = [...groups].sort(([a], [b]) => (a === '#') - (b === '#')); // números por último, como no A–Z
+  list.innerHTML = option('', 'Qualquer serviço') + ordered.map(([l, items]) =>
+    `<div class="picker-group" data-letter="${l}"><div class="picker-letter" id="pv-letter-${l}">${l}</div>
+      ${items.map(p => option(p.id, p.name)).join('')}</div>`).join('');
+  const letters = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '#'];
+  az.innerHTML = letters.map(l => `<button type="button" data-letter="${l}" ${groups.has(l) ? '' : 'disabled'}
+    aria-label="Ir para ${l === '#' ? 'números' : l}">${l}</button>`).join('');
+
+  const open = show => {
+    pop.hidden = !show;
+    toggle.setAttribute('aria-expanded', String(show));
+    if (show) {
+      search.value = '';
+      filter('');
+      list.querySelector(`[data-id="${input.value}"]`)?.scrollIntoView({ block: 'nearest' });
+      search.focus();
+    }
+  };
+  const filter = q => {
+    const term = plain(q.trim());
+    list.querySelectorAll('.picker-option').forEach(b => { b.hidden = term !== '' && !b.dataset.name.includes(term); });
+    list.querySelectorAll('.picker-group').forEach(g => { g.hidden = !g.querySelector('.picker-option:not([hidden])'); });
+  };
+
+  toggle.addEventListener('click', () => open(pop.hidden));
+  search.addEventListener('input', () => filter(search.value));
+  az.addEventListener('click', e => {
+    const l = e.target.closest('button')?.dataset.letter;
+    if (!l) return;
+    search.value = '';
+    filter('');
+    const head = document.getElementById(`pv-letter-${l}`);
+    list.scrollTop = head.parentElement.offsetTop; // a lista é position: relative
+    head.parentElement.querySelector('.picker-option')?.focus({ preventScroll: true });
+  });
+  list.addEventListener('click', e => {
+    const b = e.target.closest('.picker-option');
+    if (!b) return;
+    setProvider(b.dataset.id);
+    open(false);
+    toggle.focus();
+  });
+  pop.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { open(false); toggle.focus(); }
+    // Digitar uma letra com foco na lista pula para ela
+    if (e.target !== search && /^[a-z]$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      az.querySelector(`[data-letter="${e.key.toUpperCase()}"]:not([disabled])`)?.click();
+    }
+  });
+  document.addEventListener('click', e => { if (!pop.hidden && !e.target.closest('#provider-picker')) open(false); });
+  // O reset do formulário não limpa campo oculto: limpa aqui, e recalcula o contador depois do reset.
+  form.addEventListener('reset', () => { setProvider(''); setTimeout(updateAdvancedCount, 0); });
+}
+
+function setProvider(id) {
+  const input = document.getElementById('provider');
+  input.value = id ?? '';
+  document.getElementById('provider-current').textContent = providerNames.get(String(input.value)) || 'Qualquer';
+  document.querySelectorAll('#provider-list .picker-option').forEach(b => {
+    b.setAttribute('aria-selected', String(b.dataset.id === input.value));
+  });
+  updateAdvancedCount();
+}
+
+// Quantos filtros de "Mais filtros" estão ativos, mostrado no título da seção.
+function updateAdvancedCount() {
+  const f = readForm();
+  const n = [f.provider, f.year, f.duration !== 'any', f.actor, f.director, f.keyword, f.min_vote !== null,
+    f.rating_br, f.exclude_genres.length].filter(Boolean).length;
+  document.getElementById('adv-count').textContent = n ? `· ${n} ${n === 1 ? 'ativo' : 'ativos'}` : '';
+  return n;
+}
+form.addEventListener('input', updateAdvancedCount);
+form.addEventListener('change', updateAdvancedCount);
 
 // ------------------------------------------------------------------
 // Formulário <-> objeto de filtros (mesmo formato da API)
@@ -49,8 +148,12 @@ function readForm() {
   };
 }
 
+let filling = false;
+
 function fillForm(f) {
+  filling = true;
   form.reset();
+  filling = false;
   for (const [name, value] of Object.entries(f)) {
     const fields = form.elements.namedItem(name);
     if (!fields || value === null || value === undefined) continue;
@@ -60,11 +163,8 @@ function fillForm(f) {
       fields.value = value; // funciona para input, select e grupo de radios
     }
   }
-  const f2 = readForm();
-  if (f2.keyword || f2.actor || f2.director || f2.year || f2.min_vote || f2.provider || f2.rating_br
-      || f2.duration !== 'any' || f2.exclude_genres.length) {
-    form.querySelector('details.advanced').open = true;
-  }
+  setProvider(f.provider ? String(f.provider) : '');
+  if (updateAdvancedCount()) form.querySelector('details.advanced').open = true;
 }
 
 function restoreForm() {
@@ -82,6 +182,7 @@ form.addEventListener('submit', async (e) => {
 });
 
 form.addEventListener('reset', () => {
+  if (filling) return; // reset interno do fillForm, não do botão Limpar
   try { localStorage.removeItem(FORM_KEY); } catch { /* sem storage */ }
 });
 
