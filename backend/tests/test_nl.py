@@ -40,3 +40,42 @@ def test_recusa_vira_erro_claro(fake_tmdb, monkeypatch):
     use_fake(monkeypatch, None, stop_reason="refusal")
     with pytest.raises(nl.AIUnavailable):
         nl.text_to_filters("qualquer coisa")
+
+
+class FakeOllama:
+    def __init__(self, content=None, error=None):
+        self.content, self.error, self.sent = content, error, None
+
+    def __call__(self, url, json, timeout):
+        self.sent = {"url": url, **json}
+        if self.error:
+            raise self.error
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"message": {"content": self.content}})
+
+
+def use_ollama(monkeypatch, **kw):
+    fake = FakeOllama(**kw)
+    monkeypatch.setattr(nl, "OLLAMA_MODEL", "qwen3:4b")
+    monkeypatch.setattr(nl.requests, "post", fake)
+    return fake
+
+
+def test_ollama_recebe_o_schema_e_ids_sao_conferidos(fake_tmdb, monkeypatch):
+    fake = use_ollama(monkeypatch, content='{"genres": [80, 9999], "era": "classic"}')
+    assert nl.enabled()
+    f = nl.text_to_filters("um clássico de crime")
+    assert f.genres == [80] and f.era == "classic"
+    assert fake.sent["url"].endswith("/api/chat") and fake.sent["format"] == Filters.model_json_schema()
+    assert "<pedido>um clássico de crime</pedido>" in fake.sent["messages"][1]["content"]
+
+
+def test_ollama_resposta_fora_do_formulario_vira_erro_claro(fake_tmdb, monkeypatch):
+    use_ollama(monkeypatch, content='{"era": "anos 90"}')
+    with pytest.raises(nl.AIUnavailable):
+        nl.text_to_filters("anos 90")
+
+
+def test_ollama_desligado_avisa(fake_tmdb, monkeypatch):
+    use_ollama(monkeypatch, error=nl.requests.ConnectionError())
+    with pytest.raises(nl.AIUnavailable, match="Ollama não está rodando"):
+        nl.text_to_filters("qualquer coisa")

@@ -1,7 +1,7 @@
 # CineAI
 
 Recomenda 3 filmes ou séries a partir dos filtros que você escolhe e explica por que escolheu cada um.
-Os dados vêm ao vivo do [TMDB](https://www.themoviedb.org/). Com uma chave da Anthropic, dá para descrever o que você quer em texto livre ("um suspense curto dos anos 90") e o Claude traduz o pedido em filtros.
+Os dados vêm ao vivo do [TMDB](https://www.themoviedb.org/). Com uma IA ligada (de graça, pelo [Ollama](https://ollama.com/) no seu computador), dá para descrever o que você quer em texto livre ("um suspense curto dos anos 90") e o modelo traduz o pedido em filtros.
 
 Backend em Python (FastAPI + SQLAlchemy + SQLite). Frontend em HTML, CSS e JavaScript puro, servido pelo próprio backend.
 
@@ -55,7 +55,16 @@ Pesos por ordenação (nota, popularidade): equilibrado (0,8; 0,8), mais bem ava
 
 3. Os 3 primeiros ganham detalhes (elenco, onde assistir no Brasil, trailer) e a lista "Por que recomendamos", montada a partir das mesmas parcelas.
 
-A busca por texto faz uma única chamada ao Claude, que devolve os filtros; o resto é igual. Sem `ANTHROPIC_API_KEY`, esse campo fica desligado.
+A busca por texto faz uma única chamada a um modelo de linguagem, que devolve os filtros; o resto é igual. Sem IA configurada, esse campo fica desligado.
+
+## Ligar a busca por texto (grátis, com Ollama)
+
+1. Instale o [Ollama](https://ollama.com/download) e deixe-o aberto.
+2. Baixe um modelo pequeno: `ollama pull qwen3:4b`
+3. No `backend/.env`, adicione `OLLAMA_MODEL=qwen3:4b` e reinicie o servidor.
+
+A resposta do modelo é forçada a seguir o formato do formulário e os gêneros e serviços são conferidos contra as listas do TMDB, então um modelo pequeno não consegue inventar filmes. Em computador sem placa de vídeo, cada pedido pode levar alguns segundos.
+Também funciona com o Claude (pago): use `ANTHROPIC_API_KEY` no lugar de `OLLAMA_MODEL`.
 
 ## Testes
 
